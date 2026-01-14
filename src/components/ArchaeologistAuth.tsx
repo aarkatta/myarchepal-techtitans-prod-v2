@@ -12,9 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { ArchaeologistService } from '@/services/archaeologists';
-import { VerificationService } from '@/services/verification';
-import { Loader2, Mail, Lock, GraduationCap, Shield, CheckCircle, User } from 'lucide-react';
+import { UserService } from '@/services/users';
+import { UserRoleService } from '@/services/userRoles';
+import { DEFAULT_ORGANIZATION_ID, ROLE_IDS } from '@/types/organization';
+import { Loader2, Mail, Lock, GraduationCap, CheckCircle, User } from 'lucide-react';
 import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface ArchaeologistAuthProps {
@@ -56,7 +57,6 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
   const [signupData, setSignupData] = useState({
     firstName: '',
     lastName: '',
-    verificationCode: '',
     institution: '',
     specialization: '',
     credentials: ''
@@ -77,28 +77,21 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Check if user is registered as archaeologist
-      const isArchaeologist = await ArchaeologistService.isArchaeologist(userCredential.user.uid);
+      // Get user profile from users collection
+      const userProfile = await UserService.getByUid(userCredential.user.uid);
+      const userName = userProfile?.displayName || userCredential.user.displayName || userCredential.user.email?.split('@')[0] || "";
 
-      if (!isArchaeologist) {
-        // Sign out if not an archaeologist
-        await auth.signOut();
-        toast({
-          title: "Access Denied",
-          description: "This account is not registered as an archaeologist. Please contact an administrator.",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Get user's role from user_roles collection
+      const userRoles = await UserRoleService.getByUserId(userCredential.user.uid);
+      const highestRole = await UserRoleService.getHighestRole(userCredential.user.uid);
 
-      // Get user's display name for personalized welcome
-      const profile = await ArchaeologistService.getArchaeologistProfile(userCredential.user.uid);
-      const userName = profile?.displayName || userCredential.user.displayName || userCredential.user.email?.split('@')[0] || "";
+      console.log("User signed in:", userCredential.user);
+      console.log("User roles:", userRoles);
+      console.log("Highest role:", highestRole);
 
-      console.log("Archaeologist signed in:", userCredential.user);
       toast({
         title: userName ? `Welcome back, ${userName}!` : "Welcome back!",
-        description: "Successfully signed in as an archaeologist",
+        description: "Successfully signed in",
       });
       onAuthSuccess?.();
     } catch (error: any) {
@@ -124,16 +117,6 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
       return;
     }
 
-    // Verify archaeologist code
-    if (!VerificationService.isValidVerificationCode(signupData.verificationCode)) {
-      toast({
-        title: "Invalid Verification Code",
-        description: "Please provide a valid archaeologist verification code",
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Basic validation
     if (!signupData.firstName || !signupData.lastName || !signupData.institution || !signupData.specialization) {
       toast({
@@ -152,20 +135,31 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
       // Combine first and last name
       const displayName = `${signupData.firstName} ${signupData.lastName}`.trim();
 
-      // Register as archaeologist
-      await ArchaeologistService.registerAsArchaeologist(
-        userCredential.user.uid,
-        userCredential.user.email || '',
+      // Create user in users collection (multi-tenant system)
+      await UserService.create({
+        uid: userCredential.user.uid,
+        email: userCredential.user.email || '',
         displayName,
-        signupData.institution,
-        signupData.specialization,
-        signupData.credentials
-      );
+        organizationId: DEFAULT_ORGANIZATION_ID, // Default org until invited to specific org
+        role: 'MEMBER',
+        institution: signupData.institution,
+        specialization: signupData.specialization,
+        credentials: signupData.credentials,
+      });
 
-      console.log("Archaeologist account created:", userCredential.user);
+      // Create user_roles entry for the user
+      await UserRoleService.create({
+        userId: userCredential.user.uid,
+        roleId: ROLE_IDS.MEMBER,
+        organizationId: DEFAULT_ORGANIZATION_ID,
+      });
+
+      console.log("Account created:", userCredential.user);
+      console.log("User role assigned: MEMBER in DEFAULT organization");
+
       toast({
         title: `Welcome to ArchePal, ${displayName}!`,
-        description: "Your archaeologist account has been created successfully",
+        description: "Your account has been created successfully",
       });
       onAuthSuccess?.();
     } catch (error: any) {
@@ -240,37 +234,6 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={isSigningUp ? handleSignUp : handleSignIn} className="space-y-4">
-
-          {isSigningUp && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Verification Required</span>
-              </div>
-              <p className="text-xs text-blue-700">
-                Only verified archaeologists can create accounts. Please enter your verification code to continue.
-              </p>
-            </div>
-          )}
-
-          {isSigningUp && (
-            <div className="space-y-2">
-              <Label htmlFor="verificationCode">Archaeologist Verification Code *</Label>
-              <div className="relative">
-                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="verificationCode"
-                  name="verificationCode"
-                  value={signupData.verificationCode}
-                  onChange={handleSignupInputChange}
-                  placeholder="Enter verification code"
-                  className="pl-10"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-          )}
 
           {isSigningUp && (
             <div className="grid grid-cols-2 gap-4">

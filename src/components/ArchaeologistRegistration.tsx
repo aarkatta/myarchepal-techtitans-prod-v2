@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ArchaeologistService } from '@/services/archaeologists';
+import { UserService } from '@/services/users';
 import { useAuth } from '@/hooks/use-auth';
+import { DEFAULT_ORGANIZATION_ID } from '@/types/organization';
 import { Loader2, UserCheck, GraduationCap } from 'lucide-react';
 
 export const ArchaeologistRegistration = () => {
@@ -42,14 +43,21 @@ export const ArchaeologistRegistration = () => {
     setLoading(true);
 
     try {
-      await ArchaeologistService.registerAsArchaeologist(
-        user.uid,
-        user.email || '',
-        user.displayName || '',
-        formData.institution,
-        formData.specialization,
-        formData.credentials
-      );
+      // Create user in users collection (multi-tenant system)
+      // Check if user already exists first (may have been created during sign-up)
+      const existingUser = await UserService.getByUid(user.uid);
+      if (!existingUser) {
+        await UserService.create({
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          role: 'MEMBER',
+          institution: formData.institution,
+          specialization: formData.specialization,
+          credentials: formData.credentials,
+        });
+      }
 
       setIsRegistered(true);
       toast({

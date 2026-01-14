@@ -18,13 +18,16 @@ import {
   Lock,
   LogOut,
   BookOpen,
-  MessageSquare
+  MessageSquare,
+  Building2,
+  Shield,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { useUser } from "@/hooks/use-user";
 import {
   Collapsible,
   CollapsibleContent,
@@ -69,16 +72,19 @@ export const SideNav = () => {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const { isArchaeologist } = useArchaeologist();
+  const { isSuperAdmin, isOrgAdmin, isAdmin } = useUser();
   const [isExploreOpen, setIsExploreOpen] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isGiftShopOpen, setIsGiftShopOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
   const isExploreActive = exploreItems.some(item => isActive(item.path));
   const isGiftShopActive = giftShopItems.some(item => isActive(item.path));
   const isAccountActive = accountItems.some(item => isActive(item.path));
+  const isAdminActive = isActive('/admin') || isActive('/org-dashboard');
 
   const handleLogout = async () => {
     try {
@@ -188,6 +194,55 @@ export const SideNav = () => {
                   {item.label}
                 </button>
               ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Admin Collapsible - Only for Admin Users */}
+        {isAuthenticated && isAdmin && (
+          <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="mb-1">
+            <CollapsibleTrigger asChild>
+              <button
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isAdminActive && !isAdminOpen
+                    ? "bg-primary/10 text-primary"
+                    : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <Shield className={`w-5 h-5 ${isAdminActive ? "text-primary" : ""}`} />
+                  Admin
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-1 space-y-0.5">
+              {/* Org Dashboard - for all admins */}
+              <button
+                onClick={() => navigate('/org-dashboard')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
+                  isActive('/org-dashboard')
+                    ? "text-primary bg-primary/5"
+                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                Organization
+              </button>
+              {/* Super Admin Dashboard - only for super admins */}
+              {isSuperAdmin && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
+                    isActive('/admin')
+                      ? "text-primary bg-primary/5"
+                      : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  Super Admin
+                </button>
+              )}
             </CollapsibleContent>
           </Collapsible>
         )}

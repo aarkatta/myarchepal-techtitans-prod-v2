@@ -2,171 +2,257 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is an archaeologist
+    // Helper function to check if user is an archaeologist (legacy)
     function isArchaeologist() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/archaeologists/$(request.auth.uid));
     }
 
+    // ========================================================================
+    // MULTI-TENANT RBAC HELPER FUNCTIONS
+    // ========================================================================
+
+    // Get the current user's document from the users collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Check if user exists in the new users collection
+    function isUser() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Check if user is a Super Admin (global access)
+    function isSuperAdmin() {
+      return isUser() && getUserData().role == 'SUPER_ADMIN';
+    }
+
+    // Check if user is an Org Admin
+    function isOrgAdmin() {
+      return isUser() && getUserData().role == 'ORG_ADMIN';
+    }
+
+    // Check if user is any kind of admin
+    function isAnyAdmin() {
+      return isUser() && (getUserData().role == 'SUPER_ADMIN' || getUserData().role == 'ORG_ADMIN');
+    }
+
+    // Check if user belongs to a specific organization
+    function belongsToOrg(orgId) {
+      return isUser() && getUserData().organizationId == orgId;
+    }
+
+    // Check if user can access an organization (same org or super admin)
+    function canAccessOrg(orgId) {
+      return isSuperAdmin() || belongsToOrg(orgId);
+    }
+
+    // ========================================================================
+    // CONTENT COLLECTIONS (Public read)
+    // ========================================================================
+
     // Sites Collection - Public read, archaeologist write
     match /Sites/{siteId} {
-      allow read: if true;  // Anyone can read
+      allow read: if true;
       allow create, update, delete: if isArchaeologist();
     }
 
     // Articles Collection - Public read, archaeologist write
     match /Articles/{articleId} {
-      allow read: if true;  // Anyone can read
+      allow read: if true;
+      allow create, update, delete: if isArchaeologist();
+    }
+
+    // Events Collection - Public read, archaeologist write
+    match /events/{eventId} {
+      allow read: if true;
       allow create, update, delete: if isArchaeologist();
     }
 
     // Artifacts Collection - Public read, archaeologist write
     match /Artifacts/{artifactId} {
-      allow read: if true;  // Anyone can read
+      allow read: if true;
       allow create, update, delete: if isArchaeologist();
-
-      // PURCHASE RULE: Allow ANYONE (no authentication) to reduce quantity for purchases
-      // Only allows: 1) updating quantity and updatedAt fields, 2) artifact is for sale, 3) quantity is decreasing
+      // PURCHASE RULE: Allow anyone to reduce quantity for purchases
       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'updatedAt']) &&
                       resource.data.forSale == true &&
                       request.resource.data.quantity < resource.data.quantity;
     }
 
-    // Archaeologists Collection - Manage archaeologist roles
-    // Public read for displaying user profiles on testimonials page (displayName, credentials, institution)
+    // Merchandise Collection - Public read, authenticated users can create/update
+    match /Merchandise/{merchandiseId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null;
+      // PURCHASE RULE: Allow anyone to reduce quantity for purchases
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'updatedAt']) &&
+                      request.resource.data.quantity < resource.data.quantity;
+      allow update: if request.auth != null;
+    }
+
+    // Archaeologists Collection - Manage archaeologist roles (legacy)
     match /archaeologists/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Users Collection - Private user data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Digital Diary Collection - Users can manage their own diary entries
-    match /DigitalDiary/{entryId} {
-      allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, write: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-
-    // Feedback Collection - Users submit feedback
-    match /feedback/{feedbackId} {
-      // Allow authenticated users to create feedback (userId must match auth)
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid;
-
-      // Allow anyone to read feedback (public testimonials page)
+    // DigitalDiary Collection - Public read, archaeologist write
+    match /DigitalDiary/{digitaldiaryId} {
       allow read: if true;
-
-      // Feedback is immutable - no updates or deletes
-      allow update, delete: if false;
+      allow create, update, delete: if isArchaeologist();
     }
 
     // DropdownOptions Collection - Predefined dropdown values
     match /DropdownOptions/{docId} {
-      // Anyone can read dropdown options (needed for forms)
       allow read: if true;
-      // Archaeologists can create/update dropdown options (add new types)
       allow create, update: if isArchaeologist();
-      // No deletion allowed
       allow delete: if false;
+    }
+
+    // Feedback Collection - Users submit feedback
+    match /feedback/{feedbackId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ========================================================================
+    // MULTI-TENANT ORGANIZATION COLLECTIONS
+    // ========================================================================
+
+    // Organizations Collection
+    match /organizations/{orgId} {
+      // Anyone can read organizations (public)
+      allow read: if true;
+
+      // Anyone can create organizations during bootstrap
+      allow create: if true;
+
+      // Anyone authenticated can update organizations
+      allow update: if request.auth != null;
+
+      // Anyone authenticated can delete (but not system orgs)
+      allow delete: if request.auth != null && orgId != 'root-org' && orgId != 'default-org';
+    }
+
+    // Users Collection (Multi-tenant)
+    match /users/{userId} {
+      // Anyone can read users (public for now)
+      allow read: if true;
+
+      // Anyone can create users during bootstrap
+      allow create: if true;
+
+      // Anyone authenticated can update users
+      allow update: if request.auth != null;
+
+      // Anyone authenticated can delete users
+      allow delete: if request.auth != null;
+    }
+
+    // Roles Collection - System roles definition
+    match /roles/{roleId} {
+      // Anyone can read roles (public)
+      allow read: if true;
+
+      // Anyone can create roles during bootstrap (restrict later if needed)
+      allow create: if true;
+
+      // Anyone authenticated can update roles for now
+      allow update: if request.auth != null;
+
+      // No deletion of roles
+      allow delete: if false;
+    }
+
+    // User Roles Collection - Maps users to roles in organizations
+    match /user_roles/{mappingId} {
+      // Anyone can read user_roles (needed for role checks)
+      allow read: if true;
+
+      // Anyone can create user_roles during bootstrap
+      allow create: if true;
+
+      // Anyone authenticated can update user_roles
+      allow update: if request.auth != null;
+
+      // Anyone authenticated can delete role mappings
+      allow delete: if request.auth != null;
+    }
+
+    // Teams Collection
+    match /teams/{teamId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (!isUser() || isAnyAdmin());
+      allow update, delete: if request.auth != null && (!isUser() || isAnyAdmin());
+    }
+
+    // Team Members Collection
+    match /teamMembers/{memberId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null && (!isUser() || isAnyAdmin());
+    }
+
+    // Invitations Collection
+    match /invitations/{inviteId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (!isUser() || isAnyAdmin());
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && (!isUser() || isAnyAdmin());
     }
 
     // ========================================================================
     // CHAT SYSTEM RULES
     // ========================================================================
 
-    // Helper function to check if user is a member of a group
     function isGroupMember(groupId) {
       return request.auth != null &&
              exists(/databases/$(database)/documents/GroupMemberships/$(groupId + '_' + request.auth.uid));
     }
 
-    // Helper function to check if user is a member of a room
     function isRoomMember(roomId) {
       return request.auth != null &&
              exists(/databases/$(database)/documents/RoomMemberships/$(roomId + '_' + request.auth.uid));
     }
 
-    // Helper function to get user's role in a room
     function getRoomRole(roomId) {
       return get(/databases/$(database)/documents/RoomMemberships/$(roomId + '_' + request.auth.uid)).data.role;
     }
 
-    // Helper function to check if user is admin or sub-admin
     function isRoomAdmin(roomId) {
-      return isRoomMember(roomId) &&
-             (getRoomRole(roomId) == 'admin' || getRoomRole(roomId) == 'sub-admin');
+      return isRoomMember(roomId) && (getRoomRole(roomId) == 'admin' || getRoomRole(roomId) == 'sub-admin');
     }
 
-    // ChatGroups Collection
     match /ChatGroups/{groupId} {
-      // Anyone authenticated can create a group
       allow create: if request.auth != null;
-
-      // Only group members can read
       allow read: if isGroupMember(groupId);
-
-      // Creator or group members can update/delete
-      allow update, delete: if request.auth != null &&
-                              (isGroupMember(groupId) || resource.data.createdBy == request.auth.uid);
+      allow update, delete: if isGroupMember(groupId);
     }
 
-    // GroupMemberships Collection
     match /GroupMemberships/{membershipId} {
-      // Members can read their own membership and other memberships in their groups
       allow read: if request.auth != null;
-
-      // System creates memberships when groups are created
       allow create: if request.auth != null;
-
-      // Admins can update/delete memberships
       allow update, delete: if request.auth != null;
     }
 
-    // ChatRooms Collection
     match /ChatRooms/{roomId} {
-      // Anyone authenticated can create a room
       allow create: if request.auth != null;
-
-      // Only room members can read
       allow read: if isRoomMember(roomId);
-
-      // Creator or room members can update/delete
-      allow update, delete: if request.auth != null &&
-                              (isRoomMember(roomId) || resource.data.createdBy == request.auth.uid);
+      allow update, delete: if isRoomMember(roomId);
     }
 
-    // RoomMemberships Collection
     match /RoomMemberships/{membershipId} {
-      // Members can read their own membership and other memberships in their rooms
       allow read: if request.auth != null;
-
-      // System creates memberships when rooms are created
       allow create: if request.auth != null;
-
-      // Admins can update/delete memberships
       allow update, delete: if request.auth != null;
     }
 
-    // Messages Collection
     match /Messages/{messageId} {
-      // Only room members can read messages
       allow read: if request.auth != null && isRoomMember(resource.data.roomId);
-
-      // Authenticated users can create messages (membership checked in app)
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-
-      // Users can update their own messages, admins can update any
-      allow update: if request.auth != null &&
-                      (request.resource.data.userId == request.auth.uid ||
-                       isRoomMember(resource.data.roomId));
-
-      // Users can delete their own messages, admins can delete any
-      allow delete: if request.auth != null &&
-                      (resource.data.userId == request.auth.uid ||
-                       isRoomMember(resource.data.roomId));
+      allow update: if request.auth != null && (request.resource.data.userId == request.auth.uid || isRoomMember(resource.data.roomId));
+      allow delete: if request.auth != null && (resource.data.userId == request.auth.uid || isRoomMember(resource.data.roomId));
     }
 
     // Deny all other access

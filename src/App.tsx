@@ -21,7 +21,11 @@ import { useCapacitorInit } from "@/hooks/use-capacitor";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ChatProvider } from "@/hooks/use-chat";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SuperAdminRoute, AdminRoute } from "@/components/RoleProtectedRoute";
 import Index from "./pages/Index";
+import AdminDashboard from "./pages/AdminDashboard";
+import OrgAdminDashboard from "./pages/OrgAdminDashboard";
+import AcceptInvite from "./pages/AcceptInvite";
 import NewSite from "./pages/NewSite";
 import EditSite from "./pages/EditSite";
 import SiteMap from "./pages/SiteMap";
@@ -172,6 +176,23 @@ const App = () => {
               </ProtectedRoute>
             } />
             <Route path="/feedback-results" element={<FeedbackResults />} />
+
+            {/* Admin routes (require Super Admin role) */}
+            <Route path="/admin" element={
+              <SuperAdminRoute>
+                <AdminDashboard />
+              </SuperAdminRoute>
+            } />
+
+            {/* Organization Admin routes (require Org Admin or Super Admin role) */}
+            <Route path="/org-dashboard" element={
+              <AdminRoute>
+                <OrgAdminDashboard />
+              </AdminRoute>
+            } />
+
+            {/* Invitation acceptance route (public but requires valid token) */}
+            <Route path="/accept-invite" element={<AcceptInvite />} />
 
             {/* Catch-all route for 404 pages */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
