@@ -64,6 +64,9 @@ const OrgAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [inviteForm, setInviteForm] = useState({
     email: '',
@@ -130,6 +133,7 @@ const OrgAdminDashboard = () => {
         organizationId: organization.id,
         invitedBy: user.uid,
         role: inviteForm.role,
+        baseUrl: window.location.origin,
       });
 
       setInvitations([...invitations, invitation]);
@@ -185,9 +189,11 @@ const OrgAdminDashboard = () => {
   };
 
   const handleCopyInviteLink = (invitation: Invitation) => {
-    const baseUrl = window.location.origin;
-    const inviteLink = `${baseUrl}/#/accept-invite?token=${invitation.token}`;
+    // Use stored inviteLink if available, otherwise generate it
+    const inviteLink = invitation.inviteLink || `${window.location.origin}/#/accept-invite?token=${invitation.token}`;
     navigator.clipboard.writeText(inviteLink);
+    console.log('📋 Copied invite link:', inviteLink);
+    console.log('🔑 Token:', invitation.token);
     toast({
       title: 'Link Copied',
       description: 'Invitation link copied to clipboard',
@@ -224,6 +230,105 @@ const OrgAdminDashboard = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleDeleteMember = async () => {
+    if (!memberToDelete || !organization) return;
+
+    // Prevent deleting yourself
+    if (memberToDelete.uid === user?.uid) {
+      toast({
+        title: 'Error',
+        description: 'You cannot remove yourself from the organization',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Prevent deleting Super Admins
+    if (memberToDelete.role === 'SUPER_ADMIN') {
+      toast({
+        title: 'Error',
+        description: 'Super Admins cannot be removed',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      const { doc, setDoc, deleteDoc, Timestamp } = await import('firebase/firestore');
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const { db } = await import('@/lib/firebase');
+      const firebaseApp = (await import('@/lib/firebase')).default;
+
+      if (!db) throw new Error('Database not initialized');
+
+      // Create inactive user record with deletion metadata
+      const inactiveUserData = {
+        ...memberToDelete,
+        deletedAt: Timestamp.now(),
+        deletedBy: user?.uid,
+        deletedFromOrganization: organization.id,
+        originalStatus: memberToDelete.status,
+        status: 'INACTIVE',
+      };
+
+      // Move to users_inactive collection
+      const inactiveUserDoc = doc(db, 'users_inactive', memberToDelete.uid);
+      await setDoc(inactiveUserDoc, inactiveUserData);
+
+      // Delete from users collection
+      const userDoc = doc(db, 'users', memberToDelete.uid);
+      await deleteDoc(userDoc);
+
+      // Also delete from user_roles collection
+      const userRoleDoc = doc(db, 'user_roles', `${memberToDelete.uid}_${organization.id}`);
+      await deleteDoc(userRoleDoc);
+
+      // Delete from Firebase Authentication using Cloud Function
+      try {
+        if (firebaseApp) {
+          const functions = getFunctions(firebaseApp);
+          const deleteUserFromAuth = httpsCallable(functions, 'deleteUserFromAuth');
+          await deleteUserFromAuth({
+            userId: memberToDelete.uid,
+            organizationId: organization.id,
+          });
+          console.log('✅ User deleted from Firebase Authentication');
+        }
+      } catch (authError: any) {
+        // Log the error but don't fail the whole operation
+        // The user is already removed from Firestore
+        console.warn('Warning: Could not delete user from Authentication:', authError.message);
+        // If Cloud Function is not deployed yet, this will fail silently
+      }
+
+      // Update local state
+      setMembers(members.filter(m => m.uid !== memberToDelete.uid));
+
+      toast({
+        title: 'Member Removed',
+        description: `${memberToDelete.displayName || memberToDelete.email} has been removed from the organization`,
+      });
+
+      setDeleteDialogOpen(false);
+      setMemberToDelete(null);
+    } catch (error: any) {
+      console.error('Error removing member:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove member',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const openDeleteDialog = (member: User) => {
+    setMemberToDelete(member);
+    setDeleteDialogOpen(true);
   };
 
   const getRoleBadgeVariant = (role: UserRole) => {
@@ -413,21 +518,35 @@ const OrgAdminDashboard = () => {
                     </TableCell>
                     <TableCell>{formatDate(member.createdAt)}</TableCell>
                     <TableCell className="text-right">
-                      {/* Only show role change for non-super admins and if current user is admin */}
-                      {member.role !== 'SUPER_ADMIN' && (isOrgAdmin || isSuperAdmin) && (
-                        <Select
-                          value={member.role}
-                          onValueChange={(value) => handleUpdateUserRole(member, value as UserRole)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MEMBER">Member</SelectItem>
-                            <SelectItem value="ORG_ADMIN">Org Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Only show role change for non-super admins and if current user is admin */}
+                        {member.role !== 'SUPER_ADMIN' && (isOrgAdmin || isSuperAdmin) && (
+                          <Select
+                            value={member.role}
+                            onValueChange={(value) => handleUpdateUserRole(member, value as UserRole)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="MEMBER">Member</SelectItem>
+                              <SelectItem value="ORG_ADMIN">Org Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {/* Delete button - don't show for yourself or super admins */}
+                        {member.uid !== user?.uid && member.role !== 'SUPER_ADMIN' && (isOrgAdmin || isSuperAdmin) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(member)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Remove member"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -442,6 +561,61 @@ const OrgAdminDashboard = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Delete Member Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove Member</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove {memberToDelete?.displayName || memberToDelete?.email} from the organization?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                This action will:
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
+                <li>Remove the user from this organization</li>
+                <li>Revoke their access to organization resources</li>
+                <li>Delete their authentication account</li>
+                <li>Move their profile data to inactive status</li>
+              </ul>
+              <p className="text-sm text-destructive mt-4 font-medium">
+                Warning: The user will need to create a new account to access the system again.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setMemberToDelete(null);
+                }}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteMember}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Remove Member
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Pending Invitations Table */}
         <Card>

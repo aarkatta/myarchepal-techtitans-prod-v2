@@ -40,6 +40,9 @@ export interface Site {
   createdAt?: Date | Timestamp;
   updatedAt?: Date | Timestamp;
   createdBy?: string;
+  organizationId?: string; // Organization that owns this site
+  visibility?: 'public' | 'private'; // Visibility setting (Pro/Enterprise orgs only)
+  siteAdmins?: string[]; // User IDs who are admins of this site (can edit site and its artifacts)
 }
 
 // Collection reference - with error handling
@@ -253,6 +256,118 @@ export class SitesService {
     }
   }
 
+  // Get sites by organization ID
+  static async getSitesByOrganization(organizationId: string): Promise<Site[]> {
+    try {
+      if (!sitesCollection) {
+        console.warn('Firebase is not properly initialized');
+        return [];
+      }
+      const q = query(
+        sitesCollection,
+        where('organizationId', '==', organizationId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Site));
+    } catch (error) {
+      console.error('Error fetching sites by organization:', error);
+      throw error;
+    }
+  }
+
+
+  // Add a user as site admin
+  static async addSiteAdmin(siteId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        throw new Error('Firebase is not properly initialized');
+      }
+      const site = await this.getSiteById(siteId);
+      if (!site) {
+        throw new Error('Site not found');
+      }
+
+      const currentAdmins = site.siteAdmins || [];
+      if (!currentAdmins.includes(userId)) {
+        const siteDoc = doc(db, 'Sites', siteId);
+        await updateDoc(siteDoc, {
+          siteAdmins: [...currentAdmins, userId],
+          updatedAt: Timestamp.now()
+        });
+        console.log('✅ Site admin added:', userId);
+      }
+    } catch (error) {
+      console.error('Error adding site admin:', error);
+      throw error;
+    }
+  }
+
+  // Remove a user from site admins
+  static async removeSiteAdmin(siteId: string, userId: string): Promise<void> {
+    try {
+      if (!db) {
+        throw new Error('Firebase is not properly initialized');
+      }
+      const site = await this.getSiteById(siteId);
+      if (!site) {
+        throw new Error('Site not found');
+      }
+
+      const currentAdmins = site.siteAdmins || [];
+      const updatedAdmins = currentAdmins.filter(id => id !== userId);
+
+      const siteDoc = doc(db, 'Sites', siteId);
+      await updateDoc(siteDoc, {
+        siteAdmins: updatedAdmins,
+        updatedAt: Timestamp.now()
+      });
+      console.log('✅ Site admin removed:', userId);
+    } catch (error) {
+      console.error('Error removing site admin:', error);
+      throw error;
+    }
+  }
+
+  // Check if a user is a site admin
+  static async isSiteAdmin(siteId: string, userId: string): Promise<boolean> {
+    try {
+      const site = await this.getSiteById(siteId);
+      if (!site) return false;
+
+      // Site creator is always considered an admin
+      if (site.createdBy === userId) return true;
+
+      // Check siteAdmins array
+      return site.siteAdmins?.includes(userId) || false;
+    } catch (error) {
+      console.error('Error checking site admin status:', error);
+      return false;
+    }
+  }
+
+  // Get all site admins for a site
+  static async getSiteAdmins(siteId: string): Promise<string[]> {
+    try {
+      const site = await this.getSiteById(siteId);
+      if (!site) return [];
+
+      // Include site creator + explicit admins
+      const admins = new Set<string>();
+      if (site.createdBy) admins.add(site.createdBy);
+      if (site.siteAdmins) {
+        site.siteAdmins.forEach(id => admins.add(id));
+      }
+
+      return Array.from(admins);
+    } catch (error) {
+      console.error('Error getting site admins:', error);
+      return [];
+    }
+  }
 
   // Upload site image
   static async uploadSiteImage(siteId: string, file: File): Promise<string> {

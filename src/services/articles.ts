@@ -42,6 +42,8 @@ export interface Article {
   createdAt?: Date | Timestamp;
   updatedAt?: Date | Timestamp;
   publishedAt?: Date | Timestamp;
+  organizationId?: string; // Organization that owns this article
+  visibility?: 'public' | 'private'; // Visibility setting (Pro/Enterprise orgs only)
 }
 
 // Create a reference to the Articles collection
@@ -399,6 +401,31 @@ export class ArticlesService {
       } as Article));
     } catch (error) {
       console.error('Error fetching recent articles:', error);
+      throw error;
+    }
+  }
+
+  // Get articles by organization ID
+  static async getArticlesByOrganization(organizationId: string): Promise<Article[]> {
+    try {
+      if (!articlesCollection) {
+        console.warn('Firebase is not properly initialized');
+        return [];
+      }
+
+      const q = query(
+        articlesCollection,
+        where('organizationId', '==', organizationId),
+        where('published', '==', true)
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Article));
+    } catch (error) {
+      console.error('Error fetching articles by organization:', error);
       throw error;
     }
   }

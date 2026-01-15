@@ -13,7 +13,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { InvitationService } from '@/services/invitations';
 import { OrganizationService } from '@/services/organizations';
 import { UserService } from '@/services/users';
-import { Invitation, Organization } from '@/types/organization';
+import { UserRoleService } from '@/services/userRoles';
+import { Invitation, Organization, ROLE_IDS } from '@/types/organization';
 import {
   Loader2,
   Mail,
@@ -55,30 +56,62 @@ const AcceptInvite = () => {
   // Validate invitation token on load
   useEffect(() => {
     const validateInvitation = async () => {
+      console.log('🔍 Validating invitation token:', token);
+      console.log('🔍 Token length:', token?.length);
+
       if (!token) {
+        console.log('❌ No token provided');
         setError('No invitation token provided');
         setLoading(false);
         return;
       }
 
       try {
+        console.log('📡 Calling InvitationService.validateToken...');
         const validInvitation = await InvitationService.validateToken(token);
+        console.log('📡 Validation result:', validInvitation);
 
         if (!validInvitation) {
-          setError('Invalid or expired invitation');
+          console.log('❌ Invitation validation returned null');
+          // Try to get more details about why it failed
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
+          if (db) {
+            const invitesCollection = collection(db, 'invitations');
+            const q = query(invitesCollection, where('token', '==', token));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+              console.log('❌ No invitation found with this token in Firestore');
+              setError('Invitation not found. The link may be incorrect.');
+            } else {
+              const doc = snapshot.docs[0];
+              const data = doc.data();
+              console.log('📄 Found invitation document:', data);
+              if (data.status !== 'PENDING') {
+                setError(`Invitation is ${data.status.toLowerCase()}. It may have already been used.`);
+              } else {
+                setError('Invalid or expired invitation');
+              }
+            }
+          } else {
+            setError('Invalid or expired invitation');
+          }
           setLoading(false);
           return;
         }
 
+        console.log('✅ Valid invitation found:', validInvitation.email);
         setInvitation(validInvitation);
 
         // Get organization details
         const org = await OrganizationService.getById(validInvitation.organizationId);
+        console.log('🏢 Organization:', org?.name);
         setOrganization(org);
 
         // Check if user with this email already exists
         // (They would need to sign in to accept)
       } catch (err: any) {
+        console.error('❌ Error validating invitation:', err);
         setError(err.message || 'Failed to validate invitation');
       } finally {
         setLoading(false);
@@ -119,14 +152,15 @@ const AcceptInvite = () => {
       // Accept the invitation
       await InvitationService.accept(invitation.token);
 
+      // Determine the role ID for user_roles
+      const roleId = invitation.role === 'ORG_ADMIN' ? ROLE_IDS.ORG_ADMIN : ROLE_IDS.MEMBER;
+
       // Update user's organization and role
       if (user) {
         const existingUser = await UserService.getByUid(user.uid);
 
         if (existingUser) {
-          // Update existing user's organization
-          await UserService.updateProfile(user.uid, {});
-          // We need a method to update organization - let's add it inline
+          // Update existing user's organization and role
           const { doc, updateDoc, Timestamp } = await import('firebase/firestore');
           const { db } = await import('@/lib/firebase');
           if (db) {
@@ -137,6 +171,13 @@ const AcceptInvite = () => {
               updatedAt: Timestamp.now(),
             });
           }
+          // Update/create user_roles entry
+          await UserRoleService.assignRole(
+            user.uid,
+            roleId,
+            invitation.organizationId,
+            invitation.invitedBy
+          );
         } else {
           // Create new user record
           await UserService.create({
@@ -147,6 +188,13 @@ const AcceptInvite = () => {
             role: invitation.role,
             invitedBy: invitation.invitedBy,
           });
+          // Create user_roles entry for RBAC
+          await UserRoleService.assignRole(
+            user.uid,
+            roleId,
+            invitation.organizationId,
+            invitation.invitedBy
+          );
         }
       }
 
@@ -155,8 +203,12 @@ const AcceptInvite = () => {
         description: `You have joined ${organization?.name || 'the organization'}`,
       });
 
-      // Navigate to the org admin dashboard or home
-      navigate('/org-dashboard');
+      // Navigate based on role - admins go to dashboard, members go to home
+      if (invitation.role === 'ORG_ADMIN') {
+        navigate('/org-dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -213,12 +265,26 @@ const AcceptInvite = () => {
         invitedBy: invitation.invitedBy,
       });
 
+      // Create user_roles entry for RBAC
+      const roleId = invitation.role === 'ORG_ADMIN' ? ROLE_IDS.ORG_ADMIN : ROLE_IDS.MEMBER;
+      await UserRoleService.assignRole(
+        userCredential.user.uid,
+        roleId,
+        invitation.organizationId,
+        invitation.invitedBy
+      );
+
       toast({
         title: 'Account Created!',
         description: `Welcome to ${organization?.name || 'the organization'}`,
       });
 
-      navigate('/org-dashboard');
+      // Navigate based on role - admins go to dashboard, members go to home
+      if (invitation.role === 'ORG_ADMIN') {
+        navigate('/org-dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
         title: 'Error',

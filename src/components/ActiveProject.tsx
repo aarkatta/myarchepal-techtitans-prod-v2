@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Loader2, FileText } from "lucide-react";
 import { useSites } from "@/hooks/use-sites";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { ArchaeologistService } from "@/services/archaeologists";
 import { SiteConditions } from "@/components/SiteConditions";
 import { Timestamp } from "firebase/firestore";
@@ -14,10 +16,30 @@ import { parseDate } from "@/lib/utils";
 export const ActiveProject = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist } = useArchaeologist();
-  const { sites, loading } = useSites();
+  const { sites: allSites, loading } = useSites();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [fetchingActiveProject, setFetchingActiveProject] = useState(false);
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
+  // Filter sites based on organization type
+  // - Pro/Enterprise org users: See content belonging to their organization
+  // - Default/Free org users: See ONLY their own content (createdBy)
+  // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  const sites = user
+    ? isProOrg
+      ? allSites.filter(site => site.organizationId === organization?.id)
+      : allSites.filter(site => site.createdBy === user.uid) // Default org users see only their own
+    : allSites.filter(site =>
+        site.visibility === 'public' &&
+        site.organizationId &&
+        site.organizationId !== DEFAULT_ORGANIZATION_ID
+      );
 
   // Fetch active project ID for archaeologist
   useEffect(() => {

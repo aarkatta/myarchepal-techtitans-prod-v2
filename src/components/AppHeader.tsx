@@ -14,19 +14,28 @@
  */
 
 import { useState, useEffect } from "react";
-import { Bell, User, LogIn, Mail, WifiOff } from "lucide-react";
+import { Bell, User, LogIn, Mail, WifiOff, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useNetworkStatus } from "@/hooks/use-network";
 import { ArchaeologistService, Archaeologist } from "@/services/archaeologists";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 
 export const AppHeader = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { organization } = useUser();
   const { isOnline } = useNetworkStatus();
   const [archaeologistProfile, setArchaeologistProfile] = useState<Archaeologist | null>(null);
+
+  // Check if user should see organization branding (PRO subscription, not default org)
+  const showOrgBranding = organization &&
+    organization.subscriptionLevel === 'Pro' &&
+    organization.id !== DEFAULT_ORGANIZATION_ID;
 
   // Fetch archaeologist profile when user is available
   useEffect(() => {
@@ -85,9 +94,21 @@ export const AppHeader = () => {
           {/* Desktop: Show greeting inline */}
           <div className="hidden lg:block">
             {isAuthenticated && user ? (
-              <h2 className="text-h2 font-bold text-foreground font-heading leading-tight tracking-tight">
-                {getGreeting()}, {displayName}
-              </h2>
+              showOrgBranding ? (
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-6 h-6 text-primary" />
+                  <h2 className="text-h2 font-bold text-foreground font-heading leading-tight tracking-tight">
+                    {organization?.name}
+                  </h2>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary">
+                    PRO
+                  </Badge>
+                </div>
+              ) : (
+                <h2 className="text-h2 font-bold text-foreground font-heading leading-tight tracking-tight">
+                  {getGreeting()}, {displayName}
+                </h2>
+              )
             ) : (
               <h2 className="text-h2 font-bold text-foreground font-heading leading-tight tracking-tight">
                 Welcome to ArchePal
@@ -160,25 +181,46 @@ export const AppHeader = () => {
         {/* Greeting Section - Mobile only */}
         <div className="lg:hidden">
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-3 md:gap-4 animate-fade-in">
-              <Avatar className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-                {(archaeologistProfile?.photoURL || user.photoURL) ? (
-                  <AvatarImage src={archaeologistProfile?.photoURL || user.photoURL || undefined} />
-                ) : (
-                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold font-sans text-body">
-                    {initials}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-h2 font-bold text-foreground truncate font-heading leading-tight tracking-tight">
-                  {getGreeting()}, {displayName}
-                </h2>
-                <p className="text-body-sm text-muted-foreground font-sans leading-normal">
-                  Ready for new discoveries?
-                </p>
+            showOrgBranding ? (
+              <div className="flex items-center gap-3 md:gap-4 animate-fade-in">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                  <Building2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-h2 font-bold text-foreground truncate font-heading leading-tight tracking-tight">
+                      {organization?.name}
+                    </h2>
+                    <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
+                      PRO
+                    </Badge>
+                  </div>
+                  <p className="text-body-sm text-muted-foreground font-sans leading-normal">
+                    Welcome, {displayName}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3 md:gap-4 animate-fade-in">
+                <Avatar className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                  {(archaeologistProfile?.photoURL || user.photoURL) ? (
+                    <AvatarImage src={archaeologistProfile?.photoURL || user.photoURL || undefined} />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold font-sans text-body">
+                      {initials}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-h2 font-bold text-foreground truncate font-heading leading-tight tracking-tight">
+                    {getGreeting()}, {displayName}
+                  </h2>
+                  <p className="text-body-sm text-muted-foreground font-sans leading-normal">
+                    Ready for new discoveries?
+                  </p>
+                </div>
+              </div>
+            )
           ) : (
             <div className="animate-fade-in">
               <h2 className="text-h2 font-bold text-foreground mb-1 font-heading leading-tight tracking-tight">
@@ -194,20 +236,37 @@ export const AppHeader = () => {
         {/* Desktop: Subtitle */}
         <div className="hidden lg:block">
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-4 animate-fade-in">
-              <Avatar className="w-12 h-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-                {(archaeologistProfile?.photoURL || user.photoURL) ? (
-                  <AvatarImage src={archaeologistProfile?.photoURL || user.photoURL || undefined} />
-                ) : (
-                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold font-sans">
-                    {initials}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <p className="text-body text-muted-foreground font-sans leading-normal">
-                Ready for new discoveries?
-              </p>
-            </div>
+            showOrgBranding ? (
+              <div className="flex items-center gap-4 animate-fade-in">
+                <Avatar className="w-12 h-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                  {(archaeologistProfile?.photoURL || user.photoURL) ? (
+                    <AvatarImage src={archaeologistProfile?.photoURL || user.photoURL || undefined} />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold font-sans">
+                      {initials}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <p className="text-body text-muted-foreground font-sans leading-normal">
+                  Welcome back, {displayName}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 animate-fade-in">
+                <Avatar className="w-12 h-12 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                  {(archaeologistProfile?.photoURL || user.photoURL) ? (
+                    <AvatarImage src={archaeologistProfile?.photoURL || user.photoURL || undefined} />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold font-sans">
+                      {initials}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <p className="text-body text-muted-foreground font-sans leading-normal">
+                  Ready for new discoveries?
+                </p>
+              </div>
+            )
           ) : (
             <p className="text-body text-muted-foreground font-sans leading-normal">
               Sign in to access your projects and discoveries

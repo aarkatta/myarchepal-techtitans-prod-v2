@@ -116,6 +116,7 @@ export interface Invitation {
   role: InvitableRole;
   status: InvitationStatus;
   token: string;
+  inviteLink?: string; // Full invitation URL for easy access
   expiresAt: Date | Timestamp;
   createdAt: Date | Timestamp;
 }
@@ -126,6 +127,7 @@ export interface CreateInvitationInput {
   invitedBy: string;
   role: InvitableRole;
   expiresInDays?: number;
+  baseUrl?: string; // Used to generate the invite link
 }
 
 // ============================================================================

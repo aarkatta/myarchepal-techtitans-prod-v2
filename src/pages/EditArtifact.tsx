@@ -15,7 +15,9 @@ import { SitesService, Site } from "@/services/sites";
 import { AzureOpenAIService } from "@/services/azure-openai";
 import { DropdownOptionsService } from "@/services/dropdown-options";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
 import {
   Select,
@@ -38,7 +40,13 @@ const EditArtifact = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist, canCreate } = useArchaeologist();
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
   const [loading, setLoading] = useState(false);
   const [fetchingArtifact, setFetchingArtifact] = useState(true);
   const [artifact, setArtifact] = useState<Artifact | null>(null);
@@ -213,18 +221,32 @@ const EditArtifact = () => {
     fetchDropdownOptions();
   }, []);
 
-  // Fetch active sites created by the current user
+  // Fetch sites belonging to user's organization
+  // For Pro/Enterprise orgs: Show organization sites where user is creator or site admin
+  // For Default/Free orgs: Show only user's own sites
   useEffect(() => {
     const fetchUserSites = async () => {
-      if (!user) return;
+      if (!user || !organization) return;
 
       try {
         setSitesLoading(true);
         const allSites = await SitesService.getAllSites();
-        // Filter for sites created by user AND with active status
-        const filteredSites = allSites.filter(
-          site => site.createdBy === user.uid && site.status === 'active'
-        );
+
+        // Filter sites based on organization type
+        let filteredSites: Site[];
+
+        if (isProOrg) {
+          // Pro/Enterprise: Show sites belonging to user's organization
+          // Include sites where user is creator or site admin
+          filteredSites = allSites.filter(site =>
+            site.organizationId === organization.id &&
+            (site.createdBy === user.uid || site.siteAdmins?.includes(user.uid))
+          );
+        } else {
+          // Default/Free org: Show only sites created by the user
+          filteredSites = allSites.filter(site => site.createdBy === user.uid);
+        }
+
         setUserSites(filteredSites);
       } catch (error) {
         console.error('Error fetching user sites:', error);
@@ -238,10 +260,10 @@ const EditArtifact = () => {
       }
     };
 
-    if (user && isArchaeologist) {
+    if (user && isArchaeologist && organization) {
       fetchUserSites();
     }
-  }, [user, isArchaeologist, toast]);
+  }, [user, isArchaeologist, organization, isProOrg, toast]);
 
   // Initialize speech recognition
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Tag, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { FileText, Tag, Upload, Image as ImageIcon, Loader2, Globe, Lock } from "lucide-react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { AccountButton } from "@/components/AccountButton";
@@ -13,7 +13,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { ArticlesService } from "@/services/articles";
 import { AzureOpenAIService } from "@/services/azure-openai";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -28,12 +31,20 @@ const CreateArticle = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist, canCreate } = useArchaeologist();
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [analyzingImage, setAnalyzingImage] = useState(false);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -159,7 +170,9 @@ const CreateArticle = () => {
         likes: 0,
         comments: 0,
         featured: false,
-        published: formData.published
+        published: formData.published,
+        organizationId: organization?.id, // Set organizationId from user's organization
+        visibility: isProOrg ? visibility : 'private', // Only Pro/Enterprise orgs can set visibility
       };
 
       const articleId = await ArticlesService.createArticle(articleData);
@@ -386,6 +399,40 @@ const CreateArticle = () => {
               </div>
               <p className="text-xs text-muted-foreground">Separate multiple tags with commas</p>
             </div>
+
+            {/* Visibility Toggle - Only for Pro/Enterprise organizations */}
+            {isProOrg && (
+              <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label htmlFor="visibility" className="text-foreground flex items-center gap-2">
+                    {visibility === 'public' ? (
+                      <Globe className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Lock className="w-4 h-4 text-amber-600" />
+                    )}
+                    Visibility
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {visibility === 'public'
+                      ? 'This article will be visible to all users'
+                      : 'This article will only be visible to your organization members'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${visibility === 'private' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    Private
+                  </span>
+                  <Switch
+                    id="visibility"
+                    checked={visibility === 'public'}
+                    onCheckedChange={(checked) => setVisibility(checked ? 'public' : 'private')}
+                  />
+                  <span className={`text-sm ${visibility === 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    Public
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button

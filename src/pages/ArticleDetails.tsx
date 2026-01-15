@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Eye, ThumbsUp, MessageSquare, Clock, Share2, Edit, Loader2, User } from "lucide-react";
+import { Eye, ThumbsUp, MessageSquare, Clock, Share2, Edit, Loader2, User, Globe, Lock } from "lucide-react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { AccountButton } from "@/components/AccountButton";
@@ -11,7 +11,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ArticlesService, Article } from "@/services/articles";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Timestamp } from "firebase/firestore";
 
@@ -19,11 +23,18 @@ const ArticleDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist } = useArchaeologist();
   const { toast } = useToast();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -95,6 +106,32 @@ const ArticleDetails = () => {
   };
 
   const canEdit = user && isArchaeologist && article && article.authorId === user.uid;
+
+  // Can change visibility if: user is the creator and belongs to a Pro/Enterprise org
+  const canChangeVisibility = canEdit && isProOrg;
+
+  const handleVisibilityChange = async (newVisibility: 'public' | 'private') => {
+    if (!article?.id || !canChangeVisibility) return;
+
+    try {
+      setUpdatingVisibility(true);
+      await ArticlesService.updateArticle(article.id, { visibility: newVisibility });
+      setArticle(prev => prev ? { ...prev, visibility: newVisibility } : null);
+      toast({
+        title: "Visibility Updated",
+        description: `Article is now ${newVisibility}`,
+      });
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update visibility. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -323,6 +360,43 @@ const ArticleDetails = () => {
                   {article.id}
                 </span>
               </div>
+
+              {/* Visibility Toggle - Only for Pro/Enterprise organizations */}
+              {canChangeVisibility && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label className="text-foreground flex items-center gap-2">
+                        {article.visibility === 'public' ? (
+                          <Globe className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-amber-600" />
+                        )}
+                        Visibility
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {article.visibility === 'public'
+                          ? 'Visible to all users'
+                          : 'Only visible to organization members'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${article.visibility !== 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        Private
+                      </span>
+                      <Switch
+                        checked={article.visibility === 'public'}
+                        onCheckedChange={(checked) => handleVisibilityChange(checked ? 'public' : 'private')}
+                        disabled={updatingVisibility}
+                      />
+                      <span className={`text-sm ${article.visibility === 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        Public
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

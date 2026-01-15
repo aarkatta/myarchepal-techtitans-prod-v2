@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
 import { createEmojiElement, getArtifactEmoji } from "@/lib/sanitize";
 import { parseDate } from "@/lib/utils";
@@ -22,14 +24,35 @@ const types = ["All", "Coin", "Ceramic", "Weapon", "Glass", "Personal Ornament",
 const Artifacts = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { artifacts, loading, error, offlineCount, isOnline, usingCachedData } = useArtifacts();
+
+  // Check if user is in a Pro organization (non-default)
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
+  // Filter artifacts based on organization type
+  // - Pro/Enterprise org users: See content belonging to their organization
+  // - Default/Free org users: See ONLY their own content (createdBy)
+  // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  const orgFilteredArtifacts = user
+    ? isProOrg
+      ? artifacts.filter(artifact => artifact.organizationId === organization?.id)
+      : artifacts.filter(artifact => artifact.createdBy === user.uid) // Default org users see only their own
+    : artifacts.filter(artifact =>
+        artifact.visibility === 'public' &&
+        artifact.organizationId &&
+        artifact.organizationId !== DEFAULT_ORGANIZATION_ID
+      );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedPeriod, setSelectedPeriod] = useState("All");
   const [selectedType, setSelectedType] = useState("All");
   const [sortBy, setSortBy] = useState("recent");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredArtifacts = artifacts.filter(artifact => {
+  const filteredArtifacts = orgFilteredArtifacts.filter(artifact => {
     if (selectedPeriod !== "All" && artifact.period !== selectedPeriod) return false;
     if (selectedType !== "All" && artifact.type !== selectedType) return false;
     if (searchQuery.trim() !== "") {

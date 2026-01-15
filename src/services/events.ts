@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, Timestamp, query, orderBy } from "firebase/firestore";
+import { collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, Timestamp, query, orderBy, where } from "firebase/firestore";
 
 export interface Event {
   id?: string;
@@ -16,6 +16,8 @@ export interface Event {
   ticketPrice?: number;
   createdBy: string;
   createdAt?: Timestamp;
+  organizationId?: string; // Organization that owns this event
+  visibility?: 'public' | 'private'; // Visibility setting (Pro/Enterprise orgs only)
 }
 
 export class EventsService {
@@ -103,6 +105,30 @@ export class EventsService {
     } catch (error) {
       console.error("❌ Error deleting event:", error);
       throw error;
+    }
+  }
+
+  static async getEventsByOrganization(organizationId: string): Promise<Event[]> {
+    try {
+      if (!db) return [];
+
+      const eventsQuery = query(
+        collection(db, this.COLLECTION),
+        where("organizationId", "==", organizationId),
+        orderBy("date", "desc")
+      );
+      const querySnapshot = await getDocs(eventsQuery);
+
+      const events: Event[] = [];
+      querySnapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() } as Event);
+      });
+
+      console.log(`✅ Retrieved ${events.length} events for organization ${organizationId}`);
+      return events;
+    } catch (error) {
+      console.error("❌ Error fetching events by organization:", error);
+      return [];
     }
   }
 }

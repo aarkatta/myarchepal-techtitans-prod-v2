@@ -35,6 +35,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useUser } from '@/hooks/use-user';
 import { OrganizationService } from '@/services/organizations';
 import { UserService } from '@/services/users';
+import { InvitationService } from '@/services/invitations';
+import { UserRoleService } from '@/services/userRoles';
 import {
   Organization,
   User,
@@ -42,6 +44,7 @@ import {
   SUBSCRIPTION_LEVELS,
   ROOT_ORGANIZATION_ID,
   DEFAULT_ORGANIZATION_ID,
+  ROLE_IDS,
 } from '@/types/organization';
 import {
   Building2,
@@ -60,6 +63,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Search,
+  Mail,
+  UserPlus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -209,6 +214,8 @@ const AdminDashboard: React.FC = () => {
                 fetchData();
                 setIsCreateDialogOpen(false);
               }}
+              users={users}
+              currentUserId={currentUser?.uid || ''}
             />
           </CardHeader>
           <CardContent>
@@ -243,12 +250,18 @@ interface CreateOrganizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  users: User[];
+  currentUserId: string;
 }
+
+type AdminAssignmentMode = 'none' | 'existing' | 'invite';
 
 const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   open,
   onOpenChange,
   onSuccess,
+  users,
+  currentUserId,
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -256,6 +269,22 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
     name: '',
     subscriptionLevel: 'Free',
   });
+  const [adminMode, setAdminMode] = useState<AdminAssignmentMode>('none');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+
+  // Filter users that can be assigned as admin (not already super admins, preferably active)
+  const availableUsers = users.filter(u =>
+    u.role !== 'SUPER_ADMIN' &&
+    u.status === 'ACTIVE'
+  );
+
+  const resetForm = () => {
+    setFormData({ name: '', subscriptionLevel: 'Free' });
+    setAdminMode('none');
+    setSelectedUserId('');
+    setInviteEmail('');
+  };
 
   const handleCreate = async () => {
     if (!formData.name.trim()) {
@@ -267,26 +296,95 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
       return;
     }
 
+    // Validate admin assignment if mode selected
+    if (adminMode === 'existing' && !selectedUserId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a user to assign as admin',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (adminMode === 'invite' && !inviteEmail.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter an email address to invite',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Basic email validation
+    if (adminMode === 'invite' && !inviteEmail.includes('@')) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      await OrganizationService.create({
+      // Step 1: Create the organization
+      const newOrg = await OrganizationService.create({
         name: formData.name.trim(),
         type: 'SUBSCRIBED',
         subscriptionLevel: formData.subscriptionLevel,
       });
 
-      toast({
-        title: 'Success',
-        description: `Organization "${formData.name}" created successfully`,
-      });
+      // Step 2: Handle admin assignment
+      if (adminMode === 'existing' && selectedUserId) {
+        // Assign existing user as ORG_ADMIN
+        const { doc, updateDoc, Timestamp } = await import('firebase/firestore');
+        const { db } = await import('@/lib/firebase');
 
-      setFormData({ name: '', subscriptionLevel: 'Free' });
+        if (db) {
+          // Update user's organization and role
+          const userDoc = doc(db, 'users', selectedUserId);
+          await updateDoc(userDoc, {
+            organizationId: newOrg.id,
+            role: 'ORG_ADMIN',
+            updatedAt: Timestamp.now(),
+          });
+
+          // Also create/update user_roles entry
+          await UserRoleService.assignRole(selectedUserId, ROLE_IDS.ORG_ADMIN, newOrg.id, currentUserId);
+        }
+
+        toast({
+          title: 'Success',
+          description: `Organization "${formData.name}" created and admin assigned`,
+        });
+      } else if (adminMode === 'invite' && inviteEmail.trim()) {
+        // Send invitation to email
+        await InvitationService.create({
+          email: inviteEmail.trim().toLowerCase(),
+          organizationId: newOrg.id,
+          invitedBy: currentUserId,
+          role: 'ORG_ADMIN',
+          baseUrl: window.location.origin,
+        });
+
+        toast({
+          title: 'Success',
+          description: `Organization "${formData.name}" created and invitation sent to ${inviteEmail}`,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `Organization "${formData.name}" created successfully`,
+        });
+      }
+
+      resetForm();
       onSuccess();
     } catch (error) {
       console.error('Error creating organization:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create organization',
+        description: error instanceof Error ? error.message : 'Failed to create organization',
         variant: 'destructive',
       });
     } finally {
@@ -295,14 +393,17 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) resetForm();
+      onOpenChange(isOpen);
+    }}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="w-4 h-4 mr-2" />
           New Organization
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Organization</DialogTitle>
           <DialogDescription>
@@ -338,6 +439,100 @@ const CreateOrganizationDialog: React.FC<CreateOrganizationDialogProps> = ({
                 <SelectItem value="Enterprise">Enterprise</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Initial Admin Assignment Section */}
+          <div className="space-y-3 pt-2 border-t">
+            <Label>Initial Organization Admin</Label>
+            <p className="text-sm text-muted-foreground">
+              Optionally assign an admin to manage this organization
+            </p>
+
+            {/* Admin Mode Selection */}
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant={adminMode === 'none' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAdminMode('none')}
+                disabled={loading}
+                className="justify-start"
+              >
+                Skip - No admin assignment
+              </Button>
+              <Button
+                type="button"
+                variant={adminMode === 'existing' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAdminMode('existing')}
+                disabled={loading}
+                className="justify-start"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Select existing user
+              </Button>
+              <Button
+                type="button"
+                variant={adminMode === 'invite' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAdminMode('invite')}
+                disabled={loading}
+                className="justify-start"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Invite by email
+              </Button>
+            </div>
+
+            {/* Existing User Selection */}
+            {adminMode === 'existing' && (
+              <div className="space-y-2 pl-4 border-l-2 border-primary">
+                <Label htmlFor="adminUser">Select User *</Label>
+                <Select
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                  disabled={loading}
+                >
+                  <SelectTrigger id="adminUser">
+                    <SelectValue placeholder="Choose a user..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        No available users
+                      </SelectItem>
+                    ) : (
+                      availableUsers.map((user) => (
+                        <SelectItem key={user.uid} value={user.uid}>
+                          {user.displayName || user.email} ({user.email})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This user will be moved to the new organization and assigned as Org Admin
+                </p>
+              </div>
+            )}
+
+            {/* Email Invitation */}
+            {adminMode === 'invite' && (
+              <div className="space-y-2 pl-4 border-l-2 border-primary">
+                <Label htmlFor="inviteEmail">Email Address *</Label>
+                <Input
+                  id="inviteEmail"
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  An invitation will be sent to join as Org Admin
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -377,9 +572,183 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
   onRefresh,
 }) => {
   const { toast } = useToast();
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    subscriptionLevel: '',
+    status: '',
+  });
+  const [editAdminMode, setEditAdminMode] = useState<AdminAssignmentMode>('none');
+  const [editSelectedUserId, setEditSelectedUserId] = useState('');
+  const [editInviteEmail, setEditInviteEmail] = useState('');
+
+  // Filter users that can be assigned as admin (not super admins, active users)
+  const getAvailableUsersForOrg = (orgId: string) => {
+    return users.filter(u =>
+      u.role !== 'SUPER_ADMIN' &&
+      u.status === 'ACTIVE' &&
+      u.organizationId !== orgId // Don't show users already in this org
+    );
+  };
 
   const getUserCount = (orgId: string) => {
     return users.filter(u => u.organizationId === orgId).length;
+  };
+
+  const getOrgUsers = (orgId: string) => {
+    return users.filter(u => u.organizationId === orgId);
+  };
+
+  const getOrgAdmins = (orgId: string) => {
+    return users.filter(u => u.organizationId === orgId && u.role === 'ORG_ADMIN');
+  };
+
+  const handleViewDetails = (org: Organization) => {
+    setSelectedOrg(org);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEdit = (org: Organization) => {
+    setSelectedOrg(org);
+    setEditFormData({
+      name: org.name,
+      subscriptionLevel: org.subscriptionLevel || 'Free',
+      status: org.status,
+    });
+    // Reset admin assignment state
+    setEditAdminMode('none');
+    setEditSelectedUserId('');
+    setEditInviteEmail('');
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedOrg) return;
+
+    if (!editFormData.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Organization name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate admin assignment if mode selected
+    if (editAdminMode === 'existing' && !editSelectedUserId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a user to assign as admin',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (editAdminMode === 'invite' && !editInviteEmail.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter an email address to invite',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (editAdminMode === 'invite' && !editInviteEmail.includes('@')) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      // Step 1: Update organization details
+      await OrganizationService.update(selectedOrg.id, {
+        name: editFormData.name.trim(),
+        subscriptionLevel: editFormData.subscriptionLevel,
+        status: editFormData.status as 'ACTIVE' | 'SUSPENDED' | 'INACTIVE',
+      });
+
+      // Step 2: Handle admin assignment if specified
+      if (editAdminMode === 'existing' && editSelectedUserId) {
+        const { doc, updateDoc, Timestamp } = await import('firebase/firestore');
+        const { db } = await import('@/lib/firebase');
+
+        if (db) {
+          // Update user's organization and role
+          const userDoc = doc(db, 'users', editSelectedUserId);
+          await updateDoc(userDoc, {
+            organizationId: selectedOrg.id,
+            role: 'ORG_ADMIN',
+            updatedAt: Timestamp.now(),
+          });
+
+          // Also create/update user_roles entry
+          const currentUser = users.find(u => u.role === 'SUPER_ADMIN');
+          await UserRoleService.assignRole(
+            editSelectedUserId,
+            ROLE_IDS.ORG_ADMIN,
+            selectedOrg.id,
+            currentUser?.uid
+          );
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Organization updated and admin assigned',
+        });
+      } else if (editAdminMode === 'invite' && editInviteEmail.trim()) {
+        // Send invitation
+        const currentUser = users.find(u => u.role === 'SUPER_ADMIN');
+        await InvitationService.create({
+          email: editInviteEmail.trim().toLowerCase(),
+          organizationId: selectedOrg.id,
+          invitedBy: currentUser?.uid || '',
+          role: 'ORG_ADMIN',
+          baseUrl: window.location.origin,
+        });
+
+        toast({
+          title: 'Success',
+          description: `Organization updated and invitation sent to ${editInviteEmail}`,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Organization updated successfully',
+        });
+      }
+
+      setIsEditDialogOpen(false);
+      setSelectedOrg(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating organization:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update organization',
+        variant: 'destructive',
+      });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    const d = date.toDate ? date.toDate() : new Date(date);
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -476,13 +845,13 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewDetails(org)}>
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
                       {!isSystemOrg(org.id) && (
                         <>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(org)}>
                             <Pencil className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -507,6 +876,327 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
           )}
         </TableBody>
       </Table>
+
+      {/* View Organization Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Organization Details</DialogTitle>
+            <DialogDescription>
+              Viewing details for {selectedOrg?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrg && (
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Name</Label>
+                  <p className="font-medium">{selectedOrg.name}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Type</Label>
+                  <div className="mt-1">{getTypeBadge(selectedOrg.type)}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
+                  <div className="mt-1">{getStatusBadge(selectedOrg.status)}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Subscription</Label>
+                  <p className="font-medium">{selectedOrg.subscriptionLevel || 'Free'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Organization ID</Label>
+                  <p className="font-medium text-xs font-mono break-all">{selectedOrg.id}</p>
+                </div>
+                {selectedOrg.parentId && (
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Parent Org ID</Label>
+                    <p className="font-medium text-xs font-mono">{selectedOrg.parentId}</p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-muted-foreground text-xs">Created</Label>
+                  <p className="font-medium text-sm">{formatDate(selectedOrg.createdAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Last Updated</Label>
+                  <p className="font-medium text-sm">{formatDate(selectedOrg.updatedAt)}</p>
+                </div>
+              </div>
+
+              {/* Users Summary */}
+              <div className="pt-4 border-t">
+                <Label className="text-muted-foreground text-xs">Users Summary</Label>
+                <div className="mt-2 grid grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-2xl font-bold">{getUserCount(selectedOrg.id)}</p>
+                    <p className="text-sm text-muted-foreground">Total Users</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <p className="text-2xl font-bold">{getOrgAdmins(selectedOrg.id).length}</p>
+                    <p className="text-sm text-muted-foreground">Org Admins</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Org Admins List */}
+              {getOrgAdmins(selectedOrg.id).length > 0 && (
+                <div className="pt-2">
+                  <Label className="text-muted-foreground text-xs">Organization Admins</Label>
+                  <div className="mt-2 space-y-2">
+                    {getOrgAdmins(selectedOrg.id).map((admin) => (
+                      <div key={admin.uid} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
+                        <Badge className="bg-blue-100 text-blue-800">Admin</Badge>
+                        <span className="font-medium">{admin.displayName || 'No name'}</span>
+                        <span className="text-muted-foreground">({admin.email})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Members Preview */}
+              {getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length > 0 && (
+                <div className="pt-2">
+                  <Label className="text-muted-foreground text-xs">
+                    Members ({getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length})
+                  </Label>
+                  <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                    {getOrgUsers(selectedOrg.id)
+                      .filter(u => u.role === 'MEMBER')
+                      .slice(0, 5)
+                      .map((member) => (
+                        <div key={member.uid} className="flex items-center gap-2 text-sm">
+                          <span>{member.displayName || member.email}</span>
+                        </div>
+                      ))}
+                    {getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length > 5 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length - 5} more members
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* No Users Warning */}
+              {getUserCount(selectedOrg.id) === 0 && (
+                <div className="pt-2">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                    <p className="font-medium">No users in this organization</p>
+                    <p className="text-xs mt-1">Consider assigning an admin or inviting users.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Organization Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Organization</DialogTitle>
+            <DialogDescription>
+              Update details for {selectedOrg?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrg && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-org-name">Organization Name *</Label>
+                <Input
+                  id="edit-org-name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  disabled={editLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-org-subscription">Subscription Level</Label>
+                <Select
+                  value={editFormData.subscriptionLevel}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, subscriptionLevel: value })}
+                  disabled={editLoading}
+                >
+                  <SelectTrigger id="edit-org-subscription">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Free">Free</SelectItem>
+                    <SelectItem value="Pro">Pro</SelectItem>
+                    <SelectItem value="Enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-org-status">Status</Label>
+                <Select
+                  value={editFormData.status}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, status: value })}
+                  disabled={editLoading}
+                >
+                  <SelectTrigger id="edit-org-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current Admins Display */}
+              {getOrgAdmins(selectedOrg.id).length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <Label className="text-muted-foreground text-xs">Current Org Admins</Label>
+                  <div className="space-y-1">
+                    {getOrgAdmins(selectedOrg.id).map((admin) => (
+                      <div key={admin.uid} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
+                        <Badge className="bg-blue-100 text-blue-800">Admin</Badge>
+                        <span>{admin.displayName || admin.email}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add Admin Section */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label>Add Organization Admin</Label>
+                <p className="text-sm text-muted-foreground">
+                  {getOrgAdmins(selectedOrg.id).length === 0
+                    ? 'This organization has no admin. Add one to manage it.'
+                    : 'Optionally add another admin to this organization.'}
+                </p>
+
+                {/* Admin Mode Selection */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant={editAdminMode === 'none' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAdminMode('none')}
+                    disabled={editLoading}
+                    className="justify-start"
+                  >
+                    Skip - Don't add admin
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editAdminMode === 'existing' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAdminMode('existing')}
+                    disabled={editLoading}
+                    className="justify-start"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Select existing user
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editAdminMode === 'invite' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEditAdminMode('invite')}
+                    disabled={editLoading}
+                    className="justify-start"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Invite by email
+                  </Button>
+                </div>
+
+                {/* Existing User Selection */}
+                {editAdminMode === 'existing' && (
+                  <div className="space-y-2 pl-4 border-l-2 border-primary">
+                    <Label htmlFor="edit-admin-user">Select User *</Label>
+                    <Select
+                      value={editSelectedUserId}
+                      onValueChange={setEditSelectedUserId}
+                      disabled={editLoading}
+                    >
+                      <SelectTrigger id="edit-admin-user">
+                        <SelectValue placeholder="Choose a user..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableUsersForOrg(selectedOrg.id).length === 0 ? (
+                          <SelectItem value="" disabled>
+                            No available users
+                          </SelectItem>
+                        ) : (
+                          getAvailableUsersForOrg(selectedOrg.id).map((user) => (
+                            <SelectItem key={user.uid} value={user.uid}>
+                              {user.displayName || user.email} ({user.email})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      This user will be moved to this organization and assigned as Org Admin
+                    </p>
+                  </div>
+                )}
+
+                {/* Email Invitation */}
+                {editAdminMode === 'invite' && (
+                  <div className="space-y-2 pl-4 border-l-2 border-primary">
+                    <Label htmlFor="edit-invite-email">Email Address *</Label>
+                    <Input
+                      id="edit-invite-email"
+                      type="email"
+                      placeholder="admin@example.com"
+                      value={editInviteEmail}
+                      onChange={(e) => setEditInviteEmail(e.target.value)}
+                      disabled={editLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      An invitation will be sent to join as Org Admin
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Organization Info (Read-only) */}
+              <div className="pt-4 border-t space-y-2">
+                <Label className="text-muted-foreground text-xs">Organization ID</Label>
+                <p className="font-mono text-xs bg-muted p-2 rounded">{selectedOrg.id}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs">Type</Label>
+                <div>{getTypeBadge(selectedOrg.type)}</div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={editLoading}>
+              {editLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

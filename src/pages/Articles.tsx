@@ -12,20 +12,55 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useArticles, useFeaturedArticles, useArticlesByCategory, useArticleSearch } from "@/hooks/use-articles";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
+import { Article } from "@/services/articles";
 import { createEmojiElement } from "@/lib/sanitize";
 
 const Articles = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization } = useUser();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Check if user is in a Pro organization (non-default)
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
+  // Helper function to filter articles by organization
+  // - Pro/Enterprise org users: See content belonging to their organization
+  // - Default/Free org users: See ONLY their own content (authorId)
+  // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  const filterByOrg = (articles: Article[]) => {
+    if (user) {
+      if (isProOrg) {
+        return articles.filter(article => article.organizationId === organization?.id);
+      }
+      // Default org users see only their own articles
+      return articles.filter(article => article.authorId === user.uid);
+    }
+    return articles.filter(article =>
+      article.visibility === 'public' &&
+      article.organizationId &&
+      article.organizationId !== DEFAULT_ORGANIZATION_ID
+    );
+  };
+
   // Use different hooks based on current state
-  const { articles: allArticles, loading: allLoading, error: allError } = useArticles();
-  const { articles: featuredArticles } = useFeaturedArticles();
-  const { articles: categoryArticles, loading: categoryLoading } = useArticlesByCategory(selectedCategory);
-  const { articles: searchResults, loading: searchLoading } = useArticleSearch(searchQuery);
+  const { articles: rawAllArticles, loading: allLoading, error: allError } = useArticles();
+  const { articles: rawFeaturedArticles } = useFeaturedArticles();
+  const { articles: rawCategoryArticles, loading: categoryLoading } = useArticlesByCategory(selectedCategory);
+  const { articles: rawSearchResults, loading: searchLoading } = useArticleSearch(searchQuery);
+
+  // Apply organization filter to all article sources
+  const allArticles = filterByOrg(rawAllArticles);
+  const featuredArticles = filterByOrg(rawFeaturedArticles);
+  const categoryArticles = filterByOrg(rawCategoryArticles);
+  const searchResults = filterByOrg(rawSearchResults);
 
   // Extract unique categories from all articles
   const [categories, setCategories] = useState<string[]>(["All"]);

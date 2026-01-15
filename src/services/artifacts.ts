@@ -54,6 +54,8 @@ export interface Artifact {
   quantity?: number; // Number of items available for sale
   model3DForSale?: boolean; // Whether the 3D model is marked for sale
   model3DPrice?: number; // Price to download the 3D model
+  organizationId?: string; // Organization that owns this artifact
+  visibility?: 'public' | 'private'; // Visibility setting (Pro/Enterprise orgs only)
 }
 
 // Collection reference - with error handling
@@ -310,6 +312,29 @@ export class ArtifactsService {
       } as Artifact));
     } catch (error) {
       console.error('Error fetching artifacts by significance:', error);
+      throw error;
+    }
+  }
+
+  // Get artifacts by organization ID
+  static async getArtifactsByOrganization(organizationId: string): Promise<Artifact[]> {
+    try {
+      if (!artifactsCollection) {
+        console.warn('Firebase is not properly initialized');
+        return [];
+      }
+      const q = query(
+        artifactsCollection,
+        where('organizationId', '==', organizationId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Artifact));
+    } catch (error) {
+      console.error('Error fetching artifacts by organization:', error);
       throw error;
     }
   }

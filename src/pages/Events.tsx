@@ -7,19 +7,44 @@ import { AccountButton } from "@/components/AccountButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EventsService, Event } from "@/services/events";
+import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
 
 const Events = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { organization } = useUser();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
         const allEvents = await EventsService.getAllEvents();
-        setEvents(allEvents);
+
+        // Filter events based on organization type
+        // - Pro/Enterprise org users: See content belonging to their organization
+        // - Default/Free org users: See ONLY their own content (createdBy)
+        // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+        const filteredEvents = user
+          ? isProOrg
+            ? allEvents.filter(event => event.organizationId === organization?.id)
+            : allEvents.filter(event => event.createdBy === user.uid) // Default org users see only their own
+          : allEvents.filter(event =>
+              event.visibility === 'public' &&
+              event.organizationId &&
+              event.organizationId !== DEFAULT_ORGANIZATION_ID
+            );
+
+        setEvents(filteredEvents);
       } catch (error) {
         console.error("Error fetching events:", error);
       } finally {
@@ -28,7 +53,7 @@ const Events = () => {
     };
 
     fetchEvents();
-  }, []);
+  }, [user, isProOrg, organization?.id]);
 
   const formatEventDate = (date: Timestamp) => {
     const d = date.toDate();

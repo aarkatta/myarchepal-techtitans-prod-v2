@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, FileText, Edit, Share2, Loader2, ChevronRight, Satellite, WifiOff } from "lucide-react";
+import { MapPin, Calendar, Users, FileText, Edit, Share2, Loader2, ChevronRight, Satellite, WifiOff, Globe, Lock, UserPlus, X, Shield } from "lucide-react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { AccountButton } from "@/components/AccountButton";
@@ -10,21 +10,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SitesService, Site } from "@/services/sites";
 import { ArtifactsService, Artifact } from "@/services/artifacts";
+import { UserService } from "@/services/users";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID, User } from "@/types/organization";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Timestamp } from "firebase/firestore";
 import { useNetworkStatus } from "@/hooks/use-network";
 import { OfflineCacheService } from "@/services/offline-cache";
 import { parseDate } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SiteDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization, isOrgAdmin, isSuperAdmin } = useUser();
   const { isArchaeologist } = useArchaeologist();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
   const [site, setSite] = useState<Site | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +45,15 @@ const SiteDetails = () => {
   const [artifactsLoading, setArtifactsLoading] = useState(false);
   const [usingCachedData, setUsingCachedData] = useState(false);
   const [networkChecked, setNetworkChecked] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
+
+  // Site admin management state
+  const [orgMembers, setOrgMembers] = useState<User[]>([]);
+  const [siteAdminUsers, setSiteAdminUsers] = useState<User[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [removingAdminId, setRemovingAdminId] = useState<string | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
 
   // Wait for network status to be determined before fetching
   useEffect(() => {
@@ -156,6 +178,31 @@ const SiteDetails = () => {
     fetchSiteArtifacts();
   }, [id, isOnline, networkChecked]);
 
+  // Fetch organization members for site admin management (org admins only)
+  useEffect(() => {
+    const fetchOrgMembers = async () => {
+      if (!site?.organizationId || !organization || !isProOrg || !isOrgAdmin) return;
+
+      try {
+        setLoadingAdmins(true);
+        // Fetch all members in the organization
+        const members = await UserService.getByOrganization(site.organizationId);
+        setOrgMembers(members.filter(m => m.status === 'ACTIVE'));
+
+        // Fetch site admin user details
+        const adminIds = await SitesService.getSiteAdmins(site.id!);
+        const adminUsers = members.filter(m => adminIds.includes(m.uid));
+        setSiteAdminUsers(adminUsers);
+      } catch (error) {
+        console.error("Error fetching org members:", error);
+      } finally {
+        setLoadingAdmins(false);
+      }
+    };
+
+    fetchOrgMembers();
+  }, [site?.id, site?.organizationId, organization, isProOrg, isOrgAdmin]);
+
   const formatDate = (date: Date | Timestamp | undefined | any) => {
     const d = parseDate(date);
     if (!d) return "Unknown date";
@@ -204,12 +251,113 @@ const SiteDetails = () => {
     }
   };
 
+  // Check if current user is a site admin
+  const isSiteAdmin = user && site && (
+    site.createdBy === user.uid ||
+    site.siteAdmins?.includes(user.uid)
+  );
+
   // Allow editing if:
   // 1. User created the site, OR
-  // 2. User is an archaeologist AND site is an active project (status: "active")
+  // 2. User is an archaeologist AND site is an active project (status: "active"), OR
+  // 3. User is a site admin
   const isCreator = user && site && site.createdBy === user.uid;
   const isActiveProject = site && site.status === "active";
-  const canEdit = user && isArchaeologist && site && (isCreator || isActiveProject);
+  const canEdit = user && isArchaeologist && site && (isCreator || isActiveProject || isSiteAdmin);
+
+  // Can change visibility if: user is the creator and belongs to a Pro/Enterprise org
+  const canChangeVisibility = isCreator && isProOrg;
+
+  const handleVisibilityChange = async (newVisibility: 'public' | 'private') => {
+    if (!site?.id || !canChangeVisibility) return;
+
+    try {
+      setUpdatingVisibility(true);
+      await SitesService.updateSite(site.id, { visibility: newVisibility });
+      setSite(prev => prev ? { ...prev, visibility: newVisibility } : null);
+      toast({
+        title: "Visibility Updated",
+        description: `Site is now ${newVisibility}`,
+      });
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update visibility. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
+
+  // Handle adding a site admin
+  const handleAddSiteAdmin = async () => {
+    if (!site?.id || !selectedMemberId) return;
+
+    try {
+      setAddingAdmin(true);
+      await SitesService.addSiteAdmin(site.id, selectedMemberId);
+
+      // Update local state
+      const newAdmin = orgMembers.find(m => m.uid === selectedMemberId);
+      if (newAdmin) {
+        setSiteAdminUsers(prev => [...prev, newAdmin]);
+      }
+
+      setSelectedMemberId("");
+      toast({
+        title: "Admin Added",
+        description: "User has been added as a site admin",
+      });
+    } catch (error) {
+      console.error("Error adding site admin:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add site admin",
+        variant: "destructive"
+      });
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  // Handle removing a site admin
+  const handleRemoveSiteAdmin = async (userId: string) => {
+    if (!site?.id) return;
+
+    // Don't allow removing the site creator
+    if (userId === site.createdBy) {
+      toast({
+        title: "Cannot Remove",
+        description: "Site creator cannot be removed as admin",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setRemovingAdminId(userId);
+      await SitesService.removeSiteAdmin(site.id, userId);
+
+      // Update local state
+      setSiteAdminUsers(prev => prev.filter(u => u.uid !== userId));
+
+      toast({
+        title: "Admin Removed",
+        description: "User has been removed as site admin",
+      });
+    } catch (error) {
+      console.error("Error removing site admin:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove site admin",
+        variant: "destructive"
+      });
+    } finally {
+      setRemovingAdminId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -541,8 +689,162 @@ const SiteDetails = () => {
                   {site.id}
                 </span>
               </div>
+
+              {/* Visibility Toggle - Only for Pro/Enterprise organizations */}
+              {canChangeVisibility && isOnline && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label className="text-foreground flex items-center gap-2">
+                        {site.visibility === 'public' ? (
+                          <Globe className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-amber-600" />
+                        )}
+                        Visibility
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {site.visibility === 'public'
+                          ? 'Visible to all users'
+                          : 'Only visible to organization members'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${site.visibility !== 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        Private
+                      </span>
+                      <Switch
+                        checked={site.visibility === 'public'}
+                        onCheckedChange={(checked) => handleVisibilityChange(checked ? 'public' : 'private')}
+                        disabled={updatingVisibility}
+                      />
+                      <span className={`text-sm ${site.visibility === 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        Public
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
+
+          {/* Site Admin Management - Only for Org Admins of Pro/Enterprise orgs */}
+          {isOrgAdmin && isProOrg && site.organizationId === organization?.id && isOnline && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Site Administrators
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Site admins can edit this site and its artifacts. The site creator is always an admin.
+                </p>
+
+                {/* Current Site Admins */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Current Admins</Label>
+                  {loadingAdmins ? (
+                    <div className="flex items-center gap-2 py-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading admins...</span>
+                    </div>
+                  ) : siteAdminUsers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">
+                      Only the site creator is an admin
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {siteAdminUsers.map((adminUser) => (
+                        <div
+                          key={adminUser.uid}
+                          className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={adminUser.photoURL} />
+                              <AvatarFallback>
+                                {adminUser.displayName?.[0] || adminUser.email[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {adminUser.displayName || adminUser.email}
+                              </p>
+                              {adminUser.uid === site.createdBy && (
+                                <span className="text-xs text-muted-foreground">Creator</span>
+                              )}
+                            </div>
+                          </div>
+                          {adminUser.uid !== site.createdBy && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveSiteAdmin(adminUser.uid)}
+                              disabled={removingAdminId === adminUser.uid}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            >
+                              {removingAdminId === adminUser.uid ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <X className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add New Admin */}
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Add Site Admin</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={selectedMemberId}
+                      onValueChange={setSelectedMemberId}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select a team member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {orgMembers
+                          .filter(m =>
+                            m.uid !== site.createdBy &&
+                            !siteAdminUsers.some(a => a.uid === m.uid)
+                          )
+                          .map((member) => (
+                            <SelectItem key={member.uid} value={member.uid}>
+                              <div className="flex items-center gap-2">
+                                <span>{member.displayName || member.email}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({member.role})
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleAddSiteAdmin}
+                      disabled={!selectedMemberId || addingAdmin}
+                      size="sm"
+                    >
+                      {addingAdmin ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </ResponsiveLayout>

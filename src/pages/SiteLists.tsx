@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { useSites } from "@/hooks/use-sites";
 import { Site } from "@/services/sites";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { ArchaeologistService } from "@/services/archaeologists";
 import { useToast } from "@/components/ui/use-toast";
 import { Timestamp } from "firebase/firestore";
@@ -23,10 +25,16 @@ import { parseDate } from "@/lib/utils";
 const SiteLists = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist } = useArchaeologist();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
   const { sites, loading, error, fetchSites } = useSites();
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -63,7 +71,21 @@ const SiteLists = () => {
   }, [isOnline, sites, cachedSites]);
 
   // Determine which sites to display
-  const displaySites = usingCachedData ? cachedSites : sites;
+  // For Pro org users, only show sites that belong to their organization
+  const baseSites = usingCachedData ? cachedSites : sites;
+  // Filter sites based on organization type
+  // - Pro/Enterprise org users: See content belonging to their organization
+  // - Default/Free org users: See ONLY their own content (createdBy)
+  // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  const displaySites = user
+    ? isProOrg
+      ? baseSites.filter(site => site.organizationId === organization?.id)
+      : baseSites.filter(site => site.createdBy === user.uid) // Default org users see only their own
+    : baseSites.filter(site =>
+        site.visibility === 'public' &&
+        site.organizationId &&
+        site.organizationId !== DEFAULT_ORGANIZATION_ID
+      );
 
   // Fetch active project ID for archaeologist
   useEffect(() => {

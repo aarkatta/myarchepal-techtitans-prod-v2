@@ -4,20 +4,25 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MapPin, Calendar } from "lucide-react";
 import { ArtifactsService, Artifact } from "@/services/artifacts";
+import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
 import { parseDate } from "@/lib/utils";
 
 export const RecentFinds = () => {
   const navigate = useNavigate();
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const { user } = useAuth();
+  const { organization } = useUser();
+  const [allArtifacts, setAllArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchArtifacts = async () => {
       try {
         setLoading(true);
-        const allArtifacts = await ArtifactsService.getAllArtifacts();
-        setArtifacts(allArtifacts);
+        const fetchedArtifacts = await ArtifactsService.getAllArtifacts();
+        setAllArtifacts(fetchedArtifacts);
       } catch (error) {
         console.error("Error fetching artifacts:", error);
       } finally {
@@ -27,6 +32,25 @@ export const RecentFinds = () => {
 
     fetchArtifacts();
   }, []);
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
+  // Filter artifacts based on organization type
+  // - Pro/Enterprise org users: See content belonging to their organization
+  // - Default/Free org users: See ONLY their own content (createdBy)
+  // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  const artifacts = user
+    ? isProOrg
+      ? allArtifacts.filter(artifact => artifact.organizationId === organization?.id)
+      : allArtifacts.filter(artifact => artifact.createdBy === user.uid) // Default org users see only their own
+    : allArtifacts.filter(artifact =>
+        artifact.visibility === 'public' &&
+        artifact.organizationId &&
+        artifact.organizationId !== DEFAULT_ORGANIZATION_ID
+      );
 
   // Get the 4 most recently created artifacts (for 4-col layout on ultra-wide)
   const recentArtifacts = artifacts

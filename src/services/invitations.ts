@@ -177,6 +177,11 @@ export class InvitationService {
       expiresAt.setDate(expiresAt.getDate() + expiryDays);
 
       const inviteId = doc(collection(db, COLLECTION_NAME)).id;
+      const token = generateToken();
+
+      // Generate the invite link if baseUrl is provided
+      const baseUrl = input.baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+      const inviteLink = baseUrl ? `${baseUrl}/#/accept-invite?token=${token}` : undefined;
 
       const invitation: Invitation = {
         id: inviteId,
@@ -185,7 +190,8 @@ export class InvitationService {
         invitedBy: input.invitedBy,
         role: input.role,
         status: 'PENDING',
-        token: generateToken(),
+        token: token,
+        inviteLink: inviteLink,
         expiresAt: Timestamp.fromDate(expiresAt),
         createdAt: now,
       };
@@ -194,6 +200,8 @@ export class InvitationService {
       await setDoc(inviteDoc, invitation);
 
       console.log('✅ Invitation created:', inviteId);
+      console.log('📧 Invite link:', inviteLink);
+      console.log('🔑 Token:', token);
       return invitation;
     } catch (error) {
       console.error('❌ Error creating invitation:', error);

@@ -24,7 +24,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { ArchaeologistService, Archaeologist } from "@/services/archaeologists";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 
 const EditProfile = () => {
   // React Router hook for navigation
@@ -33,6 +35,8 @@ const EditProfile = () => {
   const { toast } = useToast();
   // Auth context hook to get current user
   const { user } = useAuth();
+  // User context hook to get organization data
+  const { organization } = useUser();
 
   // State for archaeologist profile data
   const [archaeologistProfile, setArchaeologistProfile] = useState<Archaeologist | null>(null);
@@ -46,7 +50,6 @@ const EditProfile = () => {
   // Form state management - stores profile data
   const [formData, setFormData] = useState({
     displayName: "",
-    institution: "",
     specialization: "",
     credentials: "",
   });
@@ -104,7 +107,6 @@ const EditProfile = () => {
           // Populate form with current data
           setFormData({
             displayName: profile?.displayName || user.displayName || "",
-            institution: profile?.institution || "",
             specialization: profile?.specialization || "",
             credentials: profile?.credentials || "",
           });
@@ -175,7 +177,6 @@ const EditProfile = () => {
         // Update existing archaeologist profile
         await ArchaeologistService.updateArchaeologistProfile(user.uid, {
           displayName: formData.displayName,
-          institution: formData.institution,
           specialization: formData.specialization,
           credentials: formData.credentials,
           photoURL: photoURL,
@@ -186,7 +187,7 @@ const EditProfile = () => {
           user.uid,
           user.email || "",
           formData.displayName,
-          formData.institution,
+          "", // institution - no longer used
           formData.specialization,
           formData.credentials
         );
@@ -315,19 +316,21 @@ const EditProfile = () => {
                   <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="institution" className="text-foreground">Institution</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="institution"
-                      placeholder="Enter your institution"
-                      value={formData.institution}
-                      onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                      className="pl-10 border-border"
-                    />
+                {organization && organization.id !== DEFAULT_ORGANIZATION_ID && (
+                  <div className="space-y-2">
+                    <Label htmlFor="organization" className="text-foreground">Organization</Label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="organization"
+                        value={organization.name}
+                        disabled
+                        className="pl-10 border-border bg-muted"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Organization cannot be changed</p>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="specialization" className="text-foreground">Specialization</Label>

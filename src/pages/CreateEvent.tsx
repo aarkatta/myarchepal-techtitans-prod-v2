@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { EventsService } from "@/services/events";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
 import { Timestamp } from "firebase/firestore";
 
@@ -19,6 +20,7 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist, loading: archaeologistLoading, canCreate } = useArchaeologist();
   const [loading, setLoading] = useState(false);
 
@@ -82,7 +84,8 @@ const CreateEvent = () => {
         category: formData.category,
         maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
         ticketPrice: formData.ticketPrice ? parseFloat(formData.ticketPrice) : undefined,
-        createdBy: user.uid
+        createdBy: user.uid,
+        organizationId: organization?.id, // Set organizationId from user's organization
       };
 
       await EventsService.createEvent(eventData);

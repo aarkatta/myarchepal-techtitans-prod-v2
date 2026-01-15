@@ -14,7 +14,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Settings, Bell, Shield, HelpCircle, LogOut, Building2, Award, Calendar, Loader2, UserPlus, MessageSquare, BookOpen, Trash2 } from "lucide-react";
+import { Mail, Settings, Bell, Shield, HelpCircle, LogOut, Building2, Award, Calendar, Loader2, MessageSquare, BookOpen, Trash2 } from "lucide-react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -34,15 +34,22 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { ArchaeologistService, Archaeologist } from "@/services/archaeologists";
+import { UserService } from "@/services/users";
+import { User, DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
+import { Badge } from "@/components/ui/badge";
+import { Crown } from "lucide-react";
 
 const Account = () => {
   // React Router hook for navigation
   const navigate = useNavigate();
   // Auth context hook to get current user and logout/delete functions
   const { user, logout, deleteAccount } = useAuth();
+  // User context hook to get organization data
+  const { organization } = useUser();
   // Toast notification hook for user feedback
   const { toast } = useToast();
   // State for archaeologist profile data
@@ -51,6 +58,10 @@ const Account = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   // Loading state for account deletion
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // State for organization admins
+  const [orgAdmins, setOrgAdmins] = useState<User[]>([]);
+  // Loading state for org admins
+  const [orgAdminsLoading, setOrgAdminsLoading] = useState(false);
 
   /**
    * Fetch archaeologist profile data when user is available
@@ -72,6 +83,29 @@ const Account = () => {
 
     fetchArchaeologistProfile();
   }, [user?.uid]);
+
+  /**
+   * Fetch organization admins when organization is available
+   */
+  useEffect(() => {
+    const fetchOrgAdmins = async () => {
+      if (organization && organization.id !== DEFAULT_ORGANIZATION_ID) {
+        setOrgAdminsLoading(true);
+        try {
+          // Fetch all users in this organization who are ORG_ADMIN
+          const orgUsers = await UserService.getByOrganization(organization.id);
+          const admins = orgUsers.filter((u: User) => u.role === 'ORG_ADMIN' || u.role === 'SUPER_ADMIN');
+          setOrgAdmins(admins);
+        } catch (error) {
+          console.error('Error fetching organization admins:', error);
+        } finally {
+          setOrgAdminsLoading(false);
+        }
+      }
+    };
+
+    fetchOrgAdmins();
+  }, [organization?.id]);
 
   /**
    * Format date for display
@@ -237,24 +271,71 @@ const Account = () => {
             )}
           </Card>
 
-          {/* Show archaeologist application card if user is not an archaeologist */}
-          {!profileLoading && !archaeologistProfile && (
-            <Card className="p-6 border-border bg-gradient-to-r from-primary/5 to-secondary/5">
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <UserPlus className="w-6 h-6 text-primary" />
+          {/* Organization Info Card - Show for users in non-default organizations */}
+          {organization && organization.id !== DEFAULT_ORGANIZATION_ID && (
+            <Card className="p-6 border-border">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="font-semibold text-foreground">Become an Archaeologist</h3>
-                <p className="text-sm text-muted-foreground">
-                  Apply to become a verified archaeologist to access additional features like creating sites and cataloging artifacts.
-                </p>
-                <Button
-                  onClick={() => navigate("/authentication/sign-up")}
-                  className="mt-4"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Apply Now
-                </Button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground">{organization.name}</h3>
+                    {organization.subscriptionLevel === 'Pro' && (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
+                        PRO
+                      </Badge>
+                    )}
+                    {organization.subscriptionLevel === 'Enterprise' && (
+                      <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 text-xs">
+                        ENTERPRISE
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {organization.status === 'ACTIVE' ? 'Active Organization' : organization.status}
+                  </p>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Crown className="w-4 h-4" />
+                  <span>Organization Admin{orgAdmins.length > 1 ? 's' : ''}</span>
+                </div>
+
+                {orgAdminsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Loading admins...</span>
+                  </div>
+                ) : orgAdmins.length > 0 ? (
+                  <div className="space-y-2">
+                    {orgAdmins.map((admin) => (
+                      <div key={admin.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={admin.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${admin.email}`} />
+                          <AvatarFallback className="text-xs">
+                            {admin.displayName?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AD'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {admin.displayName || admin.email}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{admin.email}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {admin.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No admins found</p>
+                )}
               </div>
             </Card>
           )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Image as ImageIcon, MapPin, Calendar, Ruler, Tag, Loader2, Building2, DollarSign, Mic, MicOff, FileText, WifiOff, Cloud } from "lucide-react";
+import { Upload, Image as ImageIcon, MapPin, Calendar, Ruler, Tag, Loader2, Building2, DollarSign, Mic, MicOff, FileText, WifiOff, Cloud, Globe, Lock } from "lucide-react";
 import { useKeyboard } from "@/hooks/use-keyboard";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -16,7 +16,9 @@ import { SitesService, Site } from "@/services/sites";
 import { AzureOpenAIService } from "@/services/azure-openai";
 import { DropdownOptionsService } from "@/services/dropdown-options";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { Timestamp } from "firebase/firestore";
 import {
   Select,
@@ -41,6 +43,7 @@ const CreateArtifact = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isArchaeologist, loading: archaeologistLoading, canCreate } = useArchaeologist();
   const { isOnline, pendingCount } = useOfflineSync();
   const { hideKeyboard } = useKeyboard();
@@ -62,6 +65,12 @@ const CreateArtifact = () => {
   const [customMaterial, setCustomMaterial] = useState("");
   const [customCondition, setCustomCondition] = useState("");
   const [customSignificance, setCustomSignificance] = useState("");
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
 
   // Dropdown options from Firebase
   const [types, setTypes] = useState<string[]>(defaultTypes);
@@ -152,15 +161,33 @@ const CreateArtifact = () => {
     fetchDropdownOptions();
   }, []);
 
-  // Fetch all sites (allow archaeologists to add artifacts to any site)
+  // Fetch sites belonging to user's organization
+  // For Pro/Enterprise orgs: Show organization sites where user is creator or site admin
+  // For Default/Free orgs: Show only user's own sites
   useEffect(() => {
     const fetchUserSites = async () => {
-      if (!user) return;
+      if (!user || !organization) return;
 
       try {
         setSitesLoading(true);
         const allSites = await SitesService.getAllSites();
-        setUserSites(allSites);
+
+        // Filter sites based on organization type
+        let filteredSites: Site[];
+
+        if (isProOrg) {
+          // Pro/Enterprise: Show sites belonging to user's organization
+          // Include sites where user is creator or site admin
+          filteredSites = allSites.filter(site =>
+            site.organizationId === organization.id &&
+            (site.createdBy === user.uid || site.siteAdmins?.includes(user.uid))
+          );
+        } else {
+          // Default/Free org: Show only sites created by the user
+          filteredSites = allSites.filter(site => site.createdBy === user.uid);
+        }
+
+        setUserSites(filteredSites);
       } catch (error) {
         console.error('Error fetching sites:', error);
         toast({
@@ -173,10 +200,10 @@ const CreateArtifact = () => {
       }
     };
 
-    if (user && isArchaeologist) {
+    if (user && isArchaeologist && organization) {
       fetchUserSites();
     }
-  }, [user, isArchaeologist, toast]);
+  }, [user, isArchaeologist, organization, isProOrg, toast]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -472,6 +499,8 @@ const CreateArtifact = () => {
         createdBy: user.uid,
         model3DForSale: model3DForSale,
         notes: formData.notes || "",
+        organizationId: organization?.id, // Set organizationId from user's organization
+        visibility: isProOrg ? visibility : 'private', // Only Pro/Enterprise orgs can set visibility
       };
 
       // Only include model3DPrice if it has a valid value
@@ -911,7 +940,9 @@ const CreateArtifact = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                All available sites are shown. Optionally associate artifact with a site.
+                {isProOrg
+                  ? "Sites from your organization where you are creator or admin."
+                  : "Your sites are shown. Optionally associate artifact with a site."}
               </p>
             </div>
 
@@ -1226,6 +1257,40 @@ const CreateArtifact = () => {
               </div>
               <p className="text-xs text-muted-foreground">Separate multiple tags with commas</p>
             </div>
+
+            {/* Visibility Toggle - Only for Pro/Enterprise organizations */}
+            {isProOrg && (
+              <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label htmlFor="visibility" className="text-foreground flex items-center gap-2">
+                    {visibility === 'public' ? (
+                      <Globe className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Lock className="w-4 h-4 text-amber-600" />
+                    )}
+                    Visibility
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {visibility === 'public'
+                      ? 'This artifact will be visible to all users'
+                      : 'This artifact will only be visible to your organization members'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${visibility === 'private' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    Private
+                  </span>
+                  <Switch
+                    id="visibility"
+                    checked={visibility === 'public'}
+                    onCheckedChange={(checked) => setVisibility(checked ? 'public' : 'private')}
+                  />
+                  <span className={`text-sm ${visibility === 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    Public
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button

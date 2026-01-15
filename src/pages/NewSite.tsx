@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, FileText, Save, Loader2, Upload, Image as ImageIcon, Mic, MicOff } from "lucide-react";
+import { MapPin, FileText, Save, Loader2, Upload, Image as ImageIcon, Mic, MicOff, Globe, Lock, AlertCircle } from "lucide-react";
 import { useKeyboard } from "@/hooks/use-keyboard";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,7 +15,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { SitesService } from "@/services/sites";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
+import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Default coordinates for Raleigh, North Carolina
 const DEFAULT_LOCATION = {
@@ -27,7 +31,8 @@ const NewSite = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isArchaeologist, loading: archaeologistLoading, canCreate } = useArchaeologist();
+  const { organization, isOrgAdmin, isSuperAdmin } = useUser();
+  const { isArchaeologist, loading: archaeologistLoading, canCreate: baseCanCreate } = useArchaeologist();
   const { hideKeyboard } = useKeyboard();
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
@@ -36,6 +41,17 @@ const NewSite = () => {
   const [locationLoading, setLocationLoading] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+
+  // Check if user is in a Pro/Enterprise organization (non-default)
+  const isProOrg = organization &&
+    organization.id !== DEFAULT_ORGANIZATION_ID &&
+    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+
+  // For Pro/Enterprise orgs: Only org admins can create new sites
+  // For Free/Default orgs: Any archaeologist can create sites (personal use)
+  const canCreateInOrg = isProOrg ? (isOrgAdmin || isSuperAdmin) : true;
+  const canCreate = baseCanCreate && canCreateInOrg;
 
   // Handle tap outside inputs to dismiss keyboard
   useEffect(() => {
@@ -323,7 +339,9 @@ const NewSite = () => {
         artifacts: [],
         images: [],
         createdBy: user?.uid || "anonymous",
-        notes: formData.notes || ""
+        notes: formData.notes || "",
+        organizationId: organization?.id, // Set organizationId from user's organization
+        visibility: isProOrg ? visibility : 'private' // Only Pro/Enterprise orgs can set visibility
       };
 
       const siteId = await SitesService.createSite(siteData);
@@ -394,22 +412,43 @@ const NewSite = () => {
           </div>
         </div>
 
-        {/* Show message for non-archaeologists */}
+        {/* Show message for non-archaeologists or restricted Pro org members */}
         {!canCreate && (
           <div className="p-4">
             <Card>
               <CardContent className="pt-6 text-center">
-                <p className="text-muted-foreground mb-4">
-                  {!user ? 'Please sign in as an archaeologist to create archaeological sites.' :
-                   !isArchaeologist ? 'Only verified archaeologists can create sites.' :
-                   'Loading...'}
-                </p>
+                {/* Pro org member restriction message */}
+                {isProOrg && !canCreateInOrg ? (
+                  <Alert variant="default" className="mb-4 text-left">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Site Creation Restricted</AlertTitle>
+                    <AlertDescription>
+                      In Pro/Enterprise organizations, only organization administrators can create new sites.
+                      As a member, you can edit sites where you've been assigned as a site admin.
+                      Contact your organization admin to create new sites or to be added as a site admin.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <p className="text-muted-foreground mb-4">
+                    {!user ? 'Please sign in as an archaeologist to create archaeological sites.' :
+                     !isArchaeologist ? 'Only verified archaeologists can create sites.' :
+                     'Loading...'}
+                  </p>
+                )}
                 {!user && (
                   <Button
                     onClick={() => navigate('/authentication/sign-in')}
                     variant="outline"
                   >
                     Sign In as Archaeologist
+                  </Button>
+                )}
+                {isProOrg && !canCreateInOrg && (
+                  <Button
+                    onClick={() => navigate('/site-lists')}
+                    variant="outline"
+                  >
+                    View Existing Sites
                   </Button>
                 )}
               </CardContent>
@@ -550,6 +589,40 @@ const NewSite = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Visibility Toggle - Only for Pro/Enterprise organizations */}
+              {isProOrg && (
+                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/30">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="visibility" className="text-foreground flex items-center gap-2">
+                      {visibility === 'public' ? (
+                        <Globe className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Lock className="w-4 h-4 text-amber-600" />
+                      )}
+                      Visibility
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {visibility === 'public'
+                        ? 'This site will be visible to all users'
+                        : 'This site will only be visible to your organization members'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${visibility === 'private' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                      Private
+                    </span>
+                    <Switch
+                      id="visibility"
+                      checked={visibility === 'public'}
+                      onCheckedChange={(checked) => setVisibility(checked ? 'public' : 'private')}
+                    />
+                    <span className={`text-sm ${visibility === 'public' ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                      Public
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
