@@ -24,7 +24,7 @@ export const Footer = () => {
           </Link>
           <span className="hidden sm:inline">|</span>
           <span className="font-medium">
-             <Link to={"https://github.com/Ak-dude/myarchepal-techtitans"}>Github</Link>
+             <Link to={"https://github.com/Ak-dude/myarchepal-techtitans"}>Tech Titans</Link>
           </span>
         </div>
       </div>
