@@ -37,6 +37,10 @@ import { OrganizationService } from '@/services/organizations';
 import { UserService } from '@/services/users';
 import { InvitationService } from '@/services/invitations';
 import { UserRoleService } from '@/services/userRoles';
+import { ArticlesService, Article } from '@/services/articles';
+import { SitesService, Site } from '@/services/sites';
+import { ArtifactsService, Artifact } from '@/services/artifacts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Organization,
   User,
@@ -58,6 +62,8 @@ import {
   Pencil,
   Trash2,
   Eye,
+  EyeOff,
+  Key,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -65,6 +71,9 @@ import {
   Search,
   Mail,
   UserPlus,
+  FileText,
+  MapPin,
+  Box,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -585,6 +594,36 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
   const [editSelectedUserId, setEditSelectedUserId] = useState('');
   const [editInviteEmail, setEditInviteEmail] = useState('');
 
+  // State for organization details (articles, sites, artifacts)
+  const [orgArticles, setOrgArticles] = useState<Article[]>([]);
+  const [orgSites, setOrgSites] = useState<Site[]>([]);
+  const [orgArtifacts, setOrgArtifacts] = useState<Artifact[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  // Fetch organization details (articles, sites, artifacts)
+  const fetchOrganizationDetails = async (orgId: string) => {
+    setDetailsLoading(true);
+    try {
+      const [articles, sites, artifacts] = await Promise.all([
+        ArticlesService.getArticlesByOrganization(orgId),
+        SitesService.getSitesByOrganization(orgId),
+        ArtifactsService.getArtifactsByOrganization(orgId),
+      ]);
+      setOrgArticles(articles);
+      setOrgSites(sites);
+      setOrgArtifacts(artifacts);
+    } catch (error) {
+      console.error('Error fetching organization details:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load organization details',
+        variant: 'destructive',
+      });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   // Filter users that can be assigned as admin (not super admins, active users)
   const getAvailableUsersForOrg = (orgId: string) => {
     return users.filter(u =>
@@ -609,6 +648,7 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
   const handleViewDetails = (org: Organization) => {
     setSelectedOrg(org);
     setIsViewDialogOpen(true);
+    fetchOrganizationDetails(org.id);
   };
 
   const handleEdit = (org: Organization) => {
@@ -832,7 +872,14 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
           ) : (
             organizations.map((org) => (
               <TableRow key={org.id}>
-                <TableCell className="font-medium">{org.name}</TableCell>
+                <TableCell className="font-medium">
+                  <button
+                    onClick={() => handleViewDetails(org)}
+                    className="text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                  >
+                    {org.name}
+                  </button>
+                </TableCell>
                 <TableCell>{getTypeBadge(org.type)}</TableCell>
                 <TableCell>{org.subscriptionLevel}</TableCell>
                 <TableCell>{getStatusBadge(org.status)}</TableCell>
@@ -879,120 +926,299 @@ const OrganizationsTable: React.FC<OrganizationsTableProps> = ({
 
       {/* View Organization Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Organization Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {selectedOrg?.name}
+            </DialogTitle>
             <DialogDescription>
-              Viewing details for {selectedOrg?.name}
+              View organization details, members, articles, sites, and artifacts
             </DialogDescription>
           </DialogHeader>
           {selectedOrg && (
-            <div className="space-y-4">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Name</Label>
-                  <p className="font-medium">{selectedOrg.name}</p>
+            <Tabs defaultValue="overview" className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="overview" className="flex items-center gap-1">
+                  <Building2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="members" className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Members</span>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{getUserCount(selectedOrg.id)}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="articles" className="flex items-center gap-1">
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Articles</span>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{orgArticles.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="sites" className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sites</span>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{orgSites.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="artifacts" className="flex items-center gap-1">
+                  <Box className="w-4 h-4" />
+                  <span className="hidden sm:inline">Artifacts</span>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{orgArtifacts.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="flex-1 overflow-y-auto mt-4">
+                <div className="space-y-4">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Name</Label>
+                      <p className="font-medium">{selectedOrg.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Type</Label>
+                      <div className="mt-1">{getTypeBadge(selectedOrg.type)}</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Status</Label>
+                      <div className="mt-1">{getStatusBadge(selectedOrg.status)}</div>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Subscription</Label>
+                      <p className="font-medium">{selectedOrg.subscriptionLevel || 'Free'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Organization ID</Label>
+                      <p className="font-medium text-xs font-mono break-all">{selectedOrg.id}</p>
+                    </div>
+                    {selectedOrg.parentId && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Parent Org ID</Label>
+                        <p className="font-medium text-xs font-mono">{selectedOrg.parentId}</p>
+                      </div>
+                    )}
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Created</Label>
+                      <p className="font-medium text-sm">{formatDate(selectedOrg.createdAt)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Last Updated</Label>
+                      <p className="font-medium text-sm">{formatDate(selectedOrg.updatedAt)}</p>
+                    </div>
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="pt-4 border-t">
+                    <Label className="text-muted-foreground text-xs">Summary</Label>
+                    <div className="mt-2 grid grid-cols-4 gap-3">
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold">{getUserCount(selectedOrg.id)}</p>
+                        <p className="text-xs text-muted-foreground">Members</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold">{orgArticles.length}</p>
+                        <p className="text-xs text-muted-foreground">Articles</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold">{orgSites.length}</p>
+                        <p className="text-xs text-muted-foreground">Sites</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <p className="text-xl font-bold">{orgArtifacts.length}</p>
+                        <p className="text-xs text-muted-foreground">Artifacts</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Type</Label>
-                  <div className="mt-1">{getTypeBadge(selectedOrg.type)}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Status</Label>
-                  <div className="mt-1">{getStatusBadge(selectedOrg.status)}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Subscription</Label>
-                  <p className="font-medium">{selectedOrg.subscriptionLevel || 'Free'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Organization ID</Label>
-                  <p className="font-medium text-xs font-mono break-all">{selectedOrg.id}</p>
-                </div>
-                {selectedOrg.parentId && (
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Parent Org ID</Label>
-                    <p className="font-medium text-xs font-mono">{selectedOrg.parentId}</p>
+              </TabsContent>
+
+              {/* Members Tab */}
+              <TabsContent value="members" className="flex-1 overflow-y-auto mt-4">
+                {detailsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Org Admins */}
+                    {getOrgAdmins(selectedOrg.id).length > 0 && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Organization Admins ({getOrgAdmins(selectedOrg.id).length})</Label>
+                        <div className="mt-2 space-y-2">
+                          {getOrgAdmins(selectedOrg.id).map((admin) => (
+                            <div key={admin.uid} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
+                              <Badge className="bg-blue-100 text-blue-800">Admin</Badge>
+                              <span className="font-medium">{admin.displayName || 'No name'}</span>
+                              <span className="text-muted-foreground">({admin.email})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Members */}
+                    {getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length > 0 && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">
+                          Members ({getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length})
+                        </Label>
+                        <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+                          {getOrgUsers(selectedOrg.id)
+                            .filter(u => u.role === 'MEMBER')
+                            .map((member) => (
+                              <div key={member.uid} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
+                                <Badge className="bg-gray-100 text-gray-800">Member</Badge>
+                                <span className="font-medium">{member.displayName || 'No name'}</span>
+                                <span className="text-muted-foreground">({member.email})</span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Users Warning */}
+                    {getUserCount(selectedOrg.id) === 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                        <p className="font-medium">No users in this organization</p>
+                        <p className="text-xs mt-1">Consider assigning an admin or inviting users.</p>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div>
-                  <Label className="text-muted-foreground text-xs">Created</Label>
-                  <p className="font-medium text-sm">{formatDate(selectedOrg.createdAt)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Last Updated</Label>
-                  <p className="font-medium text-sm">{formatDate(selectedOrg.updatedAt)}</p>
-                </div>
-              </div>
+              </TabsContent>
 
-              {/* Users Summary */}
-              <div className="pt-4 border-t">
-                <Label className="text-muted-foreground text-xs">Users Summary</Label>
-                <div className="mt-2 grid grid-cols-2 gap-4">
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-2xl font-bold">{getUserCount(selectedOrg.id)}</p>
-                    <p className="text-sm text-muted-foreground">Total Users</p>
+              {/* Articles Tab */}
+              <TabsContent value="articles" className="flex-1 overflow-y-auto mt-4">
+                {detailsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-2xl font-bold">{getOrgAdmins(selectedOrg.id).length}</p>
-                    <p className="text-sm text-muted-foreground">Org Admins</p>
+                ) : orgArticles.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No articles in this organization</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Org Admins List */}
-              {getOrgAdmins(selectedOrg.id).length > 0 && (
-                <div className="pt-2">
-                  <Label className="text-muted-foreground text-xs">Organization Admins</Label>
-                  <div className="mt-2 space-y-2">
-                    {getOrgAdmins(selectedOrg.id).map((admin) => (
-                      <div key={admin.uid} className="flex items-center gap-2 text-sm bg-muted/30 rounded p-2">
-                        <Badge className="bg-blue-100 text-blue-800">Admin</Badge>
-                        <span className="font-medium">{admin.displayName || 'No name'}</span>
-                        <span className="text-muted-foreground">({admin.email})</span>
+                ) : (
+                  <div className="space-y-2">
+                    {orgArticles.map((article) => (
+                      <div key={article.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        {article.image ? (
+                          <img src={article.image} alt={article.title} className="w-16 h-16 object-cover rounded" />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-2xl">
+                            {article.imageEmoji || '📄'}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{article.title}</p>
+                          <p className="text-sm text-muted-foreground truncate">{article.excerpt}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span>{article.category}</span>
+                            <span>•</span>
+                            <span>{article.author}</span>
+                            {article.published && (
+                              <Badge variant="secondary" className="h-4 text-xs">Published</Badge>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </TabsContent>
 
-              {/* Members Preview */}
-              {getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length > 0 && (
-                <div className="pt-2">
-                  <Label className="text-muted-foreground text-xs">
-                    Members ({getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length})
-                  </Label>
-                  <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                    {getOrgUsers(selectedOrg.id)
-                      .filter(u => u.role === 'MEMBER')
-                      .slice(0, 5)
-                      .map((member) => (
-                        <div key={member.uid} className="flex items-center gap-2 text-sm">
-                          <span>{member.displayName || member.email}</span>
+              {/* Sites Tab */}
+              <TabsContent value="sites" className="flex-1 overflow-y-auto mt-4">
+                {detailsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : orgSites.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No sites in this organization</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {orgSites.map((site) => (
+                      <div key={site.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        {site.images && site.images.length > 0 ? (
+                          <img src={site.images[0]} alt={site.name} className="w-16 h-16 object-cover rounded" />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                            <MapPin className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{site.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{site.description}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            {site.location?.country && <span>{site.location.country}</span>}
+                            {site.period && (
+                              <>
+                                <span>•</span>
+                                <span>{site.period}</span>
+                              </>
+                            )}
+                            <Badge variant={site.status === 'active' ? 'default' : 'secondary'} className="h-4 text-xs">
+                              {site.status}
+                            </Badge>
+                          </div>
                         </div>
-                      ))}
-                    {getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length > 5 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{getOrgUsers(selectedOrg.id).filter(u => u.role === 'MEMBER').length - 5} more members
-                      </p>
-                    )}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                )}
+              </TabsContent>
 
-              {/* No Users Warning */}
-              {getUserCount(selectedOrg.id) === 0 && (
-                <div className="pt-2">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                    <p className="font-medium">No users in this organization</p>
-                    <p className="text-xs mt-1">Consider assigning an admin or inviting users.</p>
+              {/* Artifacts Tab */}
+              <TabsContent value="artifacts" className="flex-1 overflow-y-auto mt-4">
+                {detailsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                </div>
-              )}
-            </div>
+                ) : orgArtifacts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No artifacts in this organization</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {orgArtifacts.map((artifact) => (
+                      <div key={artifact.id} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        {artifact.images && artifact.images.length > 0 ? (
+                          <img src={artifact.images[0]} alt={artifact.name} className="w-16 h-16 object-cover rounded" />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                            <Box className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{artifact.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">{artifact.description}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <span>{artifact.type}</span>
+                            {artifact.period && (
+                              <>
+                                <span>•</span>
+                                <span>{artifact.period}</span>
+                              </>
+                            )}
+                            {artifact.siteName && (
+                              <>
+                                <span>•</span>
+                                <span>{artifact.siteName}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
               Close
             </Button>
@@ -1303,7 +1529,10 @@ const UsersTableWithPagination: React.FC<UsersTableWithPaginationProps> = ({
     role: '',
     status: '',
     organizationId: '',
+    newPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const getOrgName = (orgId: string) => {
     const org = organizations.find(o => o.id === orgId);
@@ -1334,12 +1563,24 @@ const UsersTableWithPagination: React.FC<UsersTableWithPaginationProps> = ({
       role: user.role || 'MEMBER',
       status: user.status || 'ACTIVE',
       organizationId: user.organizationId || '',
+      newPassword: '',
     });
+    setShowPassword(false);
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = async () => {
     if (!selectedUser) return;
+
+    // Validate password if provided
+    if (editFormData.newPassword && editFormData.newPassword.length < 6) {
+      toast({
+        title: 'Validation Error',
+        description: 'Password must be at least 6 characters long',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setEditLoading(true);
     try {
@@ -1363,6 +1604,36 @@ const UsersTableWithPagination: React.FC<UsersTableWithPaginationProps> = ({
             organizationId: editFormData.organizationId,
             updatedAt: Timestamp.now(),
           });
+        }
+      }
+
+      // Update password if provided (calls Cloud Function)
+      if (editFormData.newPassword) {
+        setPasswordLoading(true);
+        try {
+          const { getFunctions, httpsCallable } = await import('firebase/functions');
+          const functions = getFunctions();
+          const updateUserPassword = httpsCallable(functions, 'updateUserPassword');
+
+          await updateUserPassword({
+            userId: selectedUser.uid,
+            newPassword: editFormData.newPassword,
+          });
+
+          toast({
+            title: 'Password Updated',
+            description: 'User password has been changed successfully',
+          });
+        } catch (passwordError: any) {
+          console.error('Error updating password:', passwordError);
+          toast({
+            title: 'Password Update Failed',
+            description: passwordError.message || 'Failed to update password',
+            variant: 'destructive',
+          });
+          // Don't return here - other changes were successful
+        } finally {
+          setPasswordLoading(false);
         }
       }
 
@@ -1702,13 +1973,62 @@ const UsersTableWithPagination: React.FC<UsersTableWithPaginationProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Password Change Section */}
+              {selectedUser?.role !== 'SUPER_ADMIN' && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Label htmlFor="edit-password" className="flex items-center gap-2">
+                    <Key className="w-4 h-4" />
+                    Change Password
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty to keep the current password
+                  </p>
+                  <div className="relative">
+                    <Input
+                      id="edit-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter new password (min. 6 characters)"
+                      value={editFormData.newPassword}
+                      onChange={(e) => setEditFormData({ ...editFormData, newPassword: e.target.value })}
+                      disabled={editLoading || passwordLoading}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      disabled={editLoading || passwordLoading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {editFormData.newPassword && editFormData.newPassword.length > 0 && editFormData.newPassword.length < 6 && (
+                    <p className="text-xs text-destructive">
+                      Password must be at least 6 characters
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {selectedUser?.role === 'SUPER_ADMIN' && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Super Admin passwords cannot be changed through this interface.
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editLoading}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={editLoading || passwordLoading}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={editLoading}>
+            <Button onClick={handleSaveEdit} disabled={editLoading || passwordLoading}>
               {editLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
