@@ -5,10 +5,140 @@ import * as admin from "firebase-admin";
 admin.initializeApp();
 
 /**
+ * Cloud Function to update a user's password in Firebase Authentication
+ * This can only be called by Super Admins
+ */
+export const updateUserPassword = functions.https.onCall(async (data: { userId: string; newPassword: string }, context: functions.https.CallableContext) => {
+  // Check if the request is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    );
+  }
+
+  const { userId, newPassword } = data;
+
+  // Validate required fields
+  if (!userId) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "The function must be called with a userId."
+    );
+  }
+
+  if (!newPassword) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "The function must be called with a newPassword."
+    );
+  }
+
+  // Validate password length
+  if (newPassword.length < 6) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Password must be at least 6 characters long."
+    );
+  }
+
+  const callerUid = context.auth.uid;
+  const db = admin.firestore();
+
+  try {
+    // Check if caller is a super admin
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Caller user not found."
+      );
+    }
+
+    const callerData = callerDoc.data();
+    const callerRole = callerData?.role;
+
+    // Only Super Admins can change passwords
+    if (callerRole !== "SUPER_ADMIN") {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Only Super Admins can change user passwords."
+      );
+    }
+
+    // Prevent changing own password through this function
+    if (userId === callerUid) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "You cannot change your own password through this function. Use the account settings instead."
+      );
+    }
+
+    // Get the user whose password will be changed
+    const targetUserDoc = await db.collection("users").doc(userId).get();
+    if (!targetUserDoc.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "Target user not found."
+      );
+    }
+
+    const targetUserData = targetUserDoc.data();
+
+    // Prevent changing other super admin passwords
+    if (targetUserData?.role === "SUPER_ADMIN") {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Cannot change password of another Super Admin."
+      );
+    }
+
+    // Update the user's password in Firebase Authentication
+    await admin.auth().updateUser(userId, {
+      password: newPassword,
+    });
+
+    console.log(`✅ Password updated for user ${userId} by Super Admin ${callerUid}`);
+
+    return {
+      success: true,
+      message: "Password updated successfully",
+    };
+  } catch (error: any) {
+    console.error("Error updating user password:", error);
+
+    // If it's already an HttpsError, rethrow it
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+
+    // Handle specific Firebase Auth errors
+    if (error.code === "auth/user-not-found") {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "User not found in Firebase Authentication."
+      );
+    }
+
+    if (error.code === "auth/weak-password") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Password is too weak. Please use a stronger password."
+      );
+    }
+
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Failed to update user password"
+    );
+  }
+});
+
+/**
  * Cloud Function to delete a user from Firebase Authentication
  * This can only be called by authenticated users who are org admins
  */
-export const deleteUserFromAuth = functions.https.onCall(async (data, context) => {
+export const deleteUserFromAuth = functions.https.onCall(async (data: { userId: string; organizationId: string }, context: functions.https.CallableContext) => {
   // Check if the request is authenticated
   if (!context.auth) {
     throw new functions.https.HttpsError(

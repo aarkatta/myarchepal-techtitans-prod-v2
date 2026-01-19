@@ -1,0 +1,161 @@
+Test ID,Category,Subcategory,Test Case Name,Description,Preconditions,Test Steps,Expected Result,Priority
+TC-ORG-001,Organization Service,getById,Get organization by valid ID,Verify organization is returned when valid ID is provided,Organization exists in database,1. Call OrganizationService.getById with valid ID,Organization object returned with correct ID,High
+TC-ORG-002,Organization Service,getById,Get non-existent organization,Verify null is returned for non-existent organization,No organization with given ID,1. Call OrganizationService.getById with invalid ID,Returns null,High
+TC-ORG-003,Organization Service,getById,Get root organization,Verify root organization returns with constant ID 'root-org',Root org seeded,1. Call OrganizationService.getById('root-org'),Organization with id='root-org' and type='ROOT' returned,Critical
+TC-ORG-004,Organization Service,getById,Get default organization,Verify default organization returns with constant ID 'default-org',Default org seeded,1. Call OrganizationService.getById('default-org'),Organization with id='default-org' and type='DEFAULT' returned,Critical
+TC-ORG-005,Organization Service,getAll,Get all organizations,Verify all organizations are returned,Multiple orgs exist,1. Call OrganizationService.getAll(),Array of all organizations returned,High
+TC-ORG-006,Organization Service,getAll,Verify root and default orgs included,Confirm root and default organizations are in result,Orgs seeded,1. Call OrganizationService.getAll() 2. Check for root-org and default-org,Both root and default organizations present in array,High
+TC-ORG-007,Organization Service,getByType,Get ROOT type organizations,Filter organizations by ROOT type,Root org exists,1. Call OrganizationService.getByType('ROOT'),Only organizations with type='ROOT' returned,Medium
+TC-ORG-008,Organization Service,getByType,Get SUBSCRIBED type organizations,Filter organizations by SUBSCRIBED type,Subscribed orgs exist,1. Call OrganizationService.getByType('SUBSCRIBED'),Only organizations with type='SUBSCRIBED' returned,Medium
+TC-ORG-009,Organization Service,getByType,Get DEFAULT type organizations,Filter organizations by DEFAULT type,Default org exists,1. Call OrganizationService.getByType('DEFAULT'),Only organizations with type='DEFAULT' returned,Medium
+TC-ORG-010,Organization Service,create,Create new organization,Create organization with required fields,User authenticated,1. Call OrganizationService.create with name/type/subscriptionLevel,New organization created with status='ACTIVE' and timestamps,High
+TC-ORG-011,Organization Service,create,Create hierarchical organization,Create organization with parent ID,Parent org exists,1. Call OrganizationService.create with parentId,Organization created with correct parentId reference,Medium
+TC-ORG-012,Organization Service,create,Block ROOT type creation,Prevent creating ROOT type organization,None,1. Attempt OrganizationService.create with type='ROOT',Error thrown - cannot create ROOT type,Critical
+TC-ORG-013,Organization Service,create,Block DEFAULT type creation,Prevent creating DEFAULT type organization,None,1. Attempt OrganizationService.create with type='DEFAULT',Error thrown - cannot create DEFAULT type,Critical
+TC-ORG-014,Organization Service,update,Update organization name,Modify organization name,Organization exists,1. Call OrganizationService.update with new name,Name updated successfully,High
+TC-ORG-015,Organization Service,update,Update subscription level,Modify organization subscription level,Organization exists,1. Call OrganizationService.update with subscriptionLevel='Enterprise',Subscription level updated,High
+TC-ORG-016,Organization Service,update,Verify updatedAt timestamp,Check timestamp updates on modification,Organization exists,1. Get org 2. Update org 3. Compare updatedAt,updatedAt timestamp is newer than before,Medium
+TC-ORG-017,Organization Service,update,Block root org type change,Prevent changing root organization type,Root org exists,1. Attempt to update root-org type to 'SUBSCRIBED',Error thrown - cannot modify root org type,Critical
+TC-ORG-018,Organization Service,delete,Delete organization,Remove an organization,Organization exists,1. Call OrganizationService.delete,Organization no longer exists in database,High
+TC-ORG-019,Organization Service,delete,Block root org deletion,Prevent deleting root organization,Root org exists,1. Attempt OrganizationService.delete('root-org'),Error thrown - cannot delete root org,Critical
+TC-ORG-020,Organization Service,delete,Block default org deletion,Prevent deleting default organization,Default org exists,1. Attempt OrganizationService.delete('default-org'),Error thrown - cannot delete default org,Critical
+TC-ORG-021,Organization Service,suspend,Suspend active organization,Change organization status to SUSPENDED,Active org exists,1. Call OrganizationService.suspend(orgId),Organization status='SUSPENDED',High
+TC-ORG-022,Organization Service,suspend,Block root org suspension,Prevent suspending root organization,Root org exists,1. Attempt OrganizationService.suspend('root-org'),Error thrown - cannot suspend root org,Critical
+TC-ORG-023,Organization Service,activate,Activate suspended organization,Change organization status to ACTIVE,Suspended org exists,1. Call OrganizationService.activate(orgId),Organization status='ACTIVE',High
+TC-USR-001,User Service,getById,Get user by valid ID,Verify user is returned when valid ID is provided,User exists,1. Call UserService.getById with valid ID,User object returned with correct ID,High
+TC-USR-002,User Service,getById,Get non-existent user,Verify null is returned for non-existent user,No user with given ID,1. Call UserService.getById with invalid ID,Returns null,High
+TC-USR-003,User Service,getByUid,Get user by Firebase UID,Retrieve user using Firebase Auth UID,User exists with UID,1. Call UserService.getByUid with valid UID,User object returned with matching uid field,High
+TC-USR-004,User Service,getByOrganization,Get all users in organization,Retrieve all users belonging to an organization,Users exist in org,1. Call UserService.getByOrganization(orgId),Array of users with matching organizationId,High
+TC-USR-005,User Service,getByOrganization,Get users from empty organization,Retrieve users from org with no members,Org exists but empty,1. Call UserService.getByOrganization(emptyOrgId),Empty array returned,Medium
+TC-USR-006,User Service,getByRole,Get SUPER_ADMIN users,Retrieve users with SUPER_ADMIN role,Super admins exist,1. Call UserService.getByRole(rootOrgId 'SUPER_ADMIN'),Array of users with role='SUPER_ADMIN',High
+TC-USR-007,User Service,getByRole,Get ORG_ADMIN users,Retrieve users with ORG_ADMIN role in specific org,Org admins exist,1. Call UserService.getByRole(orgId 'ORG_ADMIN'),Array of users with role='ORG_ADMIN' in that org,High
+TC-USR-008,User Service,getByRole,Get MEMBER users,Retrieve users with MEMBER role in specific org,Members exist,1. Call UserService.getByRole(orgId 'MEMBER'),Array of users with role='MEMBER',High
+TC-USR-009,User Service,create,Create user with required fields,Create new user with uid/email/orgId/role,Valid org exists,1. Call UserService.create with required fields,User created with status='ACTIVE' and timestamps,High
+TC-USR-010,User Service,create,Create user with optional fields,Create user including displayName/institution/etc,Valid org exists,1. Call UserService.create with all fields,User created with all optional fields populated,Medium
+TC-USR-011,User Service,create,Block user creation without organization,Prevent creating user without organizationId,None,1. Attempt UserService.create without organizationId,Error thrown - organizationId required,Critical
+TC-USR-012,User Service,create,Default status is ACTIVE,Verify new users get ACTIVE status,Valid org exists,1. Create user without specifying status,User created with status='ACTIVE',High
+TC-USR-013,User Service,updateProfile,Update display name,Modify user display name,User exists,1. Call UserService.updateProfile with displayName,Display name updated,Medium
+TC-USR-014,User Service,updateProfile,Update institution,Modify user institution,User exists,1. Call UserService.updateProfile with institution,Institution updated,Medium
+TC-USR-015,User Service,updateRole,Update user to ORG_ADMIN,Promote member to org admin,Member user exists,1. Call UserService.updateRole(uid 'ORG_ADMIN'),User role changed to ORG_ADMIN,High
+TC-USR-016,User Service,updateRole,Block non-root SUPER_ADMIN,Prevent non-root org user becoming super admin,User in non-root org,1. Attempt UserService.updateRole(uid 'SUPER_ADMIN'),Error thrown - can only be super admin in root org,Critical
+TC-USR-017,User Service,updateStatus,Suspend user,Change user status to SUSPENDED,Active user exists,1. Call UserService.updateStatus(uid 'SUSPENDED'),User status='SUSPENDED',High
+TC-USR-018,User Service,updateStatus,Activate pending user,Change user status to ACTIVE,Pending user exists,1. Call UserService.updateStatus(uid 'ACTIVE'),User status='ACTIVE',High
+TC-USR-019,User Service,delete,Delete user,Remove a user from system,User exists,1. Call UserService.delete(uid),User no longer exists in database,High
+TC-USR-020,User Service,isSuperAdmin,Check super admin - true,Verify isSuperAdmin returns true for super admin,Super admin exists,1. Call UserService.isSuperAdmin(superAdminUid),Returns true,High
+TC-USR-021,User Service,isSuperAdmin,Check super admin - false,Verify isSuperAdmin returns false for org admin,Org admin exists,1. Call UserService.isSuperAdmin(orgAdminUid),Returns false,High
+TC-USR-022,User Service,isOrgAdmin,Check org admin - true,Verify isOrgAdmin returns true for org admin,Org admin exists,1. Call UserService.isOrgAdmin(orgAdminUid),Returns true,High
+TC-USR-023,User Service,isAdmin,Check admin - super admin,Verify isAdmin returns true for super admin,Super admin exists,1. Call UserService.isAdmin(superAdminUid),Returns true,High
+TC-USR-024,User Service,isAdmin,Check admin - org admin,Verify isAdmin returns true for org admin,Org admin exists,1. Call UserService.isAdmin(orgAdminUid),Returns true,High
+TC-USR-025,User Service,isAdmin,Check admin - member,Verify isAdmin returns false for member,Member exists,1. Call UserService.isAdmin(memberUid),Returns false,High
+TC-USR-026,User Service,isActive,Check active user,Verify isActive returns true for active user,Active user exists,1. Call UserService.isActive(activeUid),Returns true,High
+TC-USR-027,User Service,isActive,Check suspended user,Verify isActive returns false for suspended user,Suspended user exists,1. Call UserService.isActive(suspendedUid),Returns false,High
+TC-ROLE-001,Role Service,getByRoleId,Get SUPER_ADMIN role,Retrieve super admin role definition,Roles seeded,1. Call RoleService.getByRoleId('SUPER_ADMIN'),Role object with roleId='SUPER_ADMIN' returned,High
+TC-ROLE-002,Role Service,getByRoleId,Get ORG_ADMIN role,Retrieve org admin role definition,Roles seeded,1. Call RoleService.getByRoleId('ORG_ADMIN'),Role object with roleId='ORG_ADMIN' returned,High
+TC-ROLE-003,Role Service,getByRoleId,Get MEMBER role,Retrieve member role definition,Roles seeded,1. Call RoleService.getByRoleId('MEMBER'),Role object with roleId='MEMBER' returned,High
+TC-ROLE-004,Role Service,getByRoleId,Get non-existent role,Verify null for invalid role ID,Roles seeded,1. Call RoleService.getByRoleId('INVALID'),Returns null,Medium
+TC-ROLE-005,Role Service,getAll,Get all roles,Retrieve all role definitions,Roles seeded,1. Call RoleService.getAll(),Array with at least 3 roles returned,High
+TC-ROLE-006,Role Service,seedDefaultRoles,Seed all default roles,Create all predefined roles,Empty roles collection,1. Call RoleService.seedDefaultRoles(),SUPER_ADMIN/ORG_ADMIN/MEMBER roles created,Critical
+TC-ROLE-007,Role Service,seedDefaultRoles,No duplicate on re-seed,Prevent duplicate roles when seeding again,Roles already seeded,1. Call seedDefaultRoles() twice 2. Count SUPER_ADMIN roles,Only one SUPER_ADMIN role exists,High
+TC-ROLE-008,Role Service,isSeeded,Check roles seeded - true,Verify isSeeded returns true when roles exist,Roles seeded,1. Call RoleService.isSeeded(),Returns true,High
+TC-ROLE-009,Role Service,isSeeded,Check roles seeded - false,Verify isSeeded returns false when empty,Empty roles collection,1. Call RoleService.isSeeded(),Returns false,High
+TC-URM-001,UserRole Service,getByUserId,Get user role mappings,Retrieve all role mappings for a user,User has roles,1. Call UserRoleService.getByUserId(userId),Array of UserRoleMapping objects returned,High
+TC-URM-002,UserRole Service,getUserRoleInOrganization,Get role in specific org,Retrieve user's role in a specific organization,User has role in org,1. Call getUserRoleInOrganization(userId orgId),UserRoleMapping with matching userId and orgId,High
+TC-URM-003,UserRole Service,getUserRoleInOrganization,No role in org,Verify null when user has no role in org,User exists but not in org,1. Call getUserRoleInOrganization(userId otherOrgId),Returns null,Medium
+TC-URM-004,UserRole Service,assignRole,Assign role to user,Create user-role mapping in organization,User and org exist,1. Call assignRole(userId roleId orgId),UserRoleMapping created with correct fields,High
+TC-URM-005,UserRole Service,assignRole,Correct document ID format,Verify document ID is {userId}_{organizationId},User and org exist,1. Call assignRole(userId roleId orgId),Document ID matches format '{userId}_{orgId}',Medium
+TC-URM-006,UserRole Service,assignRole,Block SUPER_ADMIN in non-root,Prevent assigning SUPER_ADMIN to non-root org user,Non-root org exists,1. Attempt assignRole(userId 'SUPER_ADMIN' nonRootOrgId),Error thrown - SUPER_ADMIN only in root org,Critical
+TC-URM-007,UserRole Service,assignRole,Allow SUPER_ADMIN in root,Allow assigning SUPER_ADMIN to root org user,Root org exists,1. Call assignRole(userId 'SUPER_ADMIN' 'root-org'),UserRoleMapping created successfully,Critical
+TC-URM-008,UserRole Service,updateRole,Update user role,Modify user's role in organization,User has role in org,1. Call updateRole(userId orgId 'ORG_ADMIN'),Role updated to ORG_ADMIN,High
+TC-URM-009,UserRole Service,delete,Remove role mapping,Delete user-role mapping,Mapping exists,1. Call delete(userId orgId),Mapping no longer exists,High
+TC-URM-010,UserRole Service,hasRole,Check user has role - true,Verify hasRole returns true when user has role,User has ORG_ADMIN role,1. Call hasRole(userId 'ORG_ADMIN'),Returns true,High
+TC-URM-011,UserRole Service,hasRole,Check user has role - false,Verify hasRole returns false when user lacks role,Member user exists,1. Call hasRole(memberUserId 'SUPER_ADMIN'),Returns false,High
+TC-URM-012,UserRole Service,isSuperAdmin,Check super admin via mapping,Verify isSuperAdmin using role mapping,Super admin exists,1. Call isSuperAdmin(superAdminId),Returns true,High
+TC-URM-013,UserRole Service,isOrgAdmin,Check org admin via mapping,Verify isOrgAdmin using role mapping,Org admin exists,1. Call isOrgAdmin(orgAdminId),Returns true,High
+TC-URM-014,UserRole Service,getHighestRole,Get highest role - SUPER_ADMIN,Return SUPER_ADMIN as highest priority,User has multiple roles,1. Call getHighestRole(multiRoleUserId),Returns 'SUPER_ADMIN',High
+TC-URM-015,UserRole Service,getHighestRole,Get highest role - ORG_ADMIN,Return ORG_ADMIN when not super admin,Org admin user,1. Call getHighestRole(orgAdminId),Returns 'ORG_ADMIN',High
+TC-URM-016,UserRole Service,getHighestRole,Get highest role - MEMBER,Return MEMBER for regular users,Member user,1. Call getHighestRole(memberId),Returns 'MEMBER',High
+TC-URM-017,UserRole Service,getHighestRole,Get highest role - null,Return null for users with no roles,User with no roles,1. Call getHighestRole(noRoleUserId),Returns null,Medium
+TC-TEAM-001,Team Service,create,Create new team,Create team with required fields,Org exists,1. Call TeamService.create with name/orgId/createdBy,Team created with timestamps,High
+TC-TEAM-002,Team Service,create,Require organization ID,Block team creation without org ID,None,1. Attempt create without organizationId,Error thrown - organizationId required,High
+TC-TEAM-003,Team Service,getByOrganization,Get teams in organization,Retrieve all teams in an organization,Teams exist in org,1. Call getByOrganization(orgId),Array of teams with matching organizationId,High
+TC-TEAM-004,Team Service,update,Update team name,Modify team name,Team exists,1. Call update(teamId { name: 'New Name' }),Team name updated,Medium
+TC-TEAM-005,Team Service,delete,Delete team and memberships,Remove team and all associated memberships,Team with members exists,1. Call delete(teamId) 2. Check team 3. Check members,Team null and no memberships remain,High
+TC-TM-001,TeamMember Service,addMember,Add user to team,Create team membership,Team and user exist,1. Call addMember(teamId userId),TeamMember created with joinedAt timestamp,High
+TC-TM-002,TeamMember Service,addMember,Block duplicate membership,Prevent adding same user twice,User already in team,1. Attempt addMember(teamId existingMemberId),Error thrown - already a member,High
+TC-TM-003,TeamMember Service,getByTeam,Get team members,Retrieve all members of a team,Team has members,1. Call getByTeam(teamId),Array of TeamMembers with matching teamId,High
+TC-TM-004,TeamMember Service,getByUser,Get user's teams,Retrieve all teams user belongs to,User in multiple teams,1. Call getByUser(userId),Array of TeamMembers with matching userId,High
+TC-TM-005,TeamMember Service,removeMember,Remove from team,Delete team membership,Membership exists,1. Call removeMember(teamId userId),Membership no longer exists,High
+TC-TM-006,TeamMember Service,isMember,Check membership - true,Verify isMember returns true for team member,User is team member,1. Call isMember(teamId memberId),Returns true,High
+TC-TM-007,TeamMember Service,isMember,Check membership - false,Verify isMember returns false for non-member,User not in team,1. Call isMember(teamId nonMemberId),Returns false,High
+TC-INV-001,Invitation Service,create,Create invitation,Create new invitation with required fields,Org and inviter exist,1. Call create with email/orgId/invitedBy/role,Invitation created with status='PENDING' and token,High
+TC-INV-002,Invitation Service,create,Unique tokens,Verify each invitation gets unique token,None,1. Create two invitations 2. Compare tokens,Tokens are different,High
+TC-INV-003,Invitation Service,create,Block org admin inviting org admin,Prevent org admin from inviting other org admins,Org admin exists,1. Org admin attempts create with role='ORG_ADMIN',Error thrown - cannot invite org admins,Critical
+TC-INV-004,Invitation Service,create,Super admin can invite org admin,Allow super admin to invite org admins,Super admin exists,1. Super admin creates invite with role='ORG_ADMIN',Invitation created successfully,High
+TC-INV-005,Invitation Service,getByToken,Get invitation by token,Retrieve invitation using token,Invitation exists,1. Call getByToken(token),Invitation object returned,High
+TC-INV-006,Invitation Service,getByToken,Invalid token returns null,Verify null for invalid token,No matching invitation,1. Call getByToken('invalid-token'),Returns null,Medium
+TC-INV-007,Invitation Service,getByEmail,Get invitations by email,Retrieve all invitations for an email,Multiple invites exist,1. Call getByEmail(email),Array of invitations with matching email,Medium
+TC-INV-008,Invitation Service,getByOrganization,Get org invitations,Retrieve all invitations for an organization,Invitations exist,1. Call getByOrganization(orgId),Array of invitations with matching orgId,Medium
+TC-INV-009,Invitation Service,getPending,Get pending invitations,Retrieve only pending invitations,Mixed status invites exist,1. Call getPending(orgId),Only invitations with status='PENDING' returned,Medium
+TC-INV-010,Invitation Service,accept,Accept invitation,Mark invitation as accepted,Pending invitation exists,1. Call accept(invitationId),Invitation status='ACCEPTED',High
+TC-INV-011,Invitation Service,accept,Block expired acceptance,Prevent accepting expired invitation,Expired invitation exists,1. Attempt accept(expiredInviteId),Error thrown - invitation expired,High
+TC-INV-012,Invitation Service,accept,Block double acceptance,Prevent accepting already accepted invitation,Accepted invitation,1. Attempt accept(acceptedInviteId),Error thrown - already accepted,High
+TC-INV-013,Invitation Service,expire,Expire invitation,Mark invitation as expired,Pending invitation exists,1. Call expire(invitationId),Invitation status='EXPIRED',Medium
+TC-INV-014,Invitation Service,isValid,Check valid invitation,Verify isValid returns true for valid pending invite,Valid pending invite,1. Call isValid(token),Returns true,High
+TC-INV-015,Invitation Service,isValid,Check expired invalid,Verify isValid returns false for expired invite,Expired invitation,1. Call isValid(expiredToken),Returns false,High
+TC-INV-016,Invitation Service,isValid,Check accepted invalid,Verify isValid returns false for accepted invite,Accepted invitation,1. Call isValid(acceptedToken),Returns false,High
+TC-SEED-001,Database Seed,seedRootOrganization,Seed root organization,Create root org with constant ID,Empty database,1. Call seedRootOrganization(),Organization created with id='root-org' type='ROOT',Critical
+TC-SEED-002,Database Seed,seedRootOrganization,No duplicate root org,Prevent duplicate root organization,Root org exists,1. Call seedRootOrganization() twice 2. Count ROOT orgs,Only one ROOT organization exists,Critical
+TC-SEED-003,Database Seed,seedDefaultOrganization,Seed default organization,Create default org with constant ID,Empty database,1. Call seedDefaultOrganization(),Organization created with id='default-org' type='DEFAULT',Critical
+TC-SEED-004,Database Seed,seedRoles,Seed all roles,Create all default role definitions,Empty roles collection,1. Call seedRoles(),All 3 default roles created,Critical
+TC-SEED-005,Database Seed,seedSuperAdmin,Seed super admin,Create super admin user in root org,Root org and roles exist,1. Call seedSuperAdmin(uid email),User created in root-org with SUPER_ADMIN role,Critical
+TC-SEED-006,Database Seed,seedAll,Seed everything,Complete database seeding in order,Empty database,1. Call seedAll(),Root org + default org + roles all created,Critical
+TC-BIZ-001,Business Rules,User Membership,One org per user,User belongs to exactly one organization,User exists,1. Get user 2. Check organizationId,organizationId is single string not array,Critical
+TC-BIZ-002,Business Rules,User Membership,Block org transfer,Prevent user transfer between organizations,User in org A,1. Attempt to update user's organizationId to org B,Error thrown - transfer not supported,Critical
+TC-BIZ-003,Business Rules,Subscription,Move to default on expiration,User moved to default org when subscription expires,User in subscribed org,1. Org subscription expires 2. Check user's org,User organizationId='default-org',High
+TC-BIZ-004,Business Rules,Org Admin,Cannot invite org admins,Org admin cannot invite other org admins,Org admin exists,1. Org admin creates invite with role='ORG_ADMIN',Error thrown,Critical
+TC-BIZ-005,Business Rules,Org Admin,Can invite members,Org admin can invite members,Org admin exists,1. Org admin creates invite with role='MEMBER',Invitation created successfully,High
+TC-BIZ-006,Business Rules,Org Admin,Can create teams,Org admin can create teams in their org,Org admin exists,1. Create team with createdBy=orgAdminId,Team created successfully,High
+TC-BIZ-007,Business Rules,Data Isolation,Cannot see other orgs,Org admin cannot see other organizations,Multiple orgs exist,1. Check org admin access to other org,Access denied / returns false,Critical
+TC-BIZ-008,Business Rules,Data Isolation,Cannot see other org users,Org admin cannot see users from other orgs,Users in multiple orgs,1. Org A admin queries org B users,Empty result or access denied,Critical
+TC-BIZ-009,Business Rules,Data Isolation,Super admin sees all,Super admin can see all organizations,Multiple orgs exist,1. Super admin calls getAll(),All organizations returned,Critical
+TC-BIZ-010,Business Rules,User Removal,Only super admin removes,Only super admin can remove users from org,Users exist,1. Org admin attempts removal 2. Super admin attempts removal,Org admin fails / Super admin succeeds,Critical
+TC-RBAC-001,RBAC Permissions,Super Admin,Can create organizations,Super admin has organization:create permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-002,RBAC Permissions,Super Admin,Can delete organizations,Super admin has organization:delete permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-003,RBAC Permissions,Super Admin,Can view all users,Super admin has users:viewAll permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-004,RBAC Permissions,Super Admin,Can promote users,Super admin has users:promote permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-005,RBAC Permissions,Super Admin,Can demote users,Super admin has users:demote permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-006,RBAC Permissions,Super Admin,Can manage system settings,Super admin has system:settings permission,Super admin exists,1. Check permission,Returns true,High
+TC-RBAC-007,RBAC Permissions,Super Admin,Belongs to root org only,Super admin must be in root organization,Super admin exists,1. Check user organizationId,organizationId='root-org',Critical
+TC-RBAC-008,RBAC Permissions,Org Admin,Can invite members,Org admin has members:invite permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-009,RBAC Permissions,Org Admin,Cannot invite admins,Org admin lacks admins:invite permission,Org admin exists,1. Check permission,Returns false,Critical
+TC-RBAC-010,RBAC Permissions,Org Admin,Can create sites,Org admin has sites:create permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-011,RBAC Permissions,Org Admin,Can edit sites,Org admin has sites:edit permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-012,RBAC Permissions,Org Admin,Can delete sites,Org admin has sites:delete permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-013,RBAC Permissions,Org Admin,Can manage artifacts,Org admin has artifacts:manage permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-014,RBAC Permissions,Org Admin,Can manage articles,Org admin has articles:manage permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-015,RBAC Permissions,Org Admin,Can manage teams,Org admin has teams:manage permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-016,RBAC Permissions,Org Admin,Can manage org settings,Org admin has org:settings permission,Org admin exists,1. Check permission,Returns true,High
+TC-RBAC-017,RBAC Permissions,Org Admin,Can view billing,Org admin has billing:view permission,Org admin exists,1. Check permission,Returns true,Medium
+TC-RBAC-018,RBAC Permissions,Org Admin,Can manage subscription,Org admin has subscription:manage permission,Org admin exists,1. Check permission,Returns true,Medium
+TC-RBAC-019,RBAC Permissions,Org Admin,Can access audit logs,Org admin has audit:access permission,Org admin exists,1. Check permission,Returns true,Medium
+TC-RBAC-020,RBAC Permissions,Org Admin,Cannot see all orgs,Org admin lacks organizations:viewAll permission,Org admin exists,1. Check permission,Returns false,Critical
+TC-RBAC-021,RBAC Permissions,Member,Can view sites,Member has sites:view permission,Member exists,1. Check permission,Returns true,High
+TC-RBAC-022,RBAC Permissions,Member,Can view artifacts,Member has artifacts:view permission,Member exists,1. Check permission,Returns true,High
+TC-RBAC-023,RBAC Permissions,Member,Can edit assigned data,Member can edit data if assigned to team/site,Member in team,1. Check team permission for data:edit,Returns true,High
+TC-RBAC-024,RBAC Permissions,Member,Cannot edit unassigned,Member cannot edit unassigned team/site data,Member not in team,1. Check team permission for data:edit,Returns false,High
+TC-RBAC-025,RBAC Permissions,Member,Cannot invite users,Member lacks members:invite permission,Member exists,1. Check permission,Returns false,High
+TC-RBAC-026,RBAC Permissions,Member,Cannot create teams,Member lacks teams:create permission,Member exists,1. Check permission,Returns false,High
+TC-RBAC-027,RBAC Permissions,Member,Cannot delete sites,Member lacks sites:delete permission,Member exists,1. Check permission,Returns false,High
+TC-RBAC-028,RBAC Permissions,Default Org User,Limited access only,Default org user has read-only/limited access,User in default org,1. Check create permissions,All create permissions return false,High
+TC-INT-001,Integration,Signup Flow,Complete user signup,User created with correct role mapping on signup,Valid default org,1. Create user 2. Assign MEMBER role 3. Verify,User exists with MEMBER role in default org,Critical
+TC-INT-002,Integration,Invitation Flow,Complete invitation acceptance,Full flow from invite to user creation,Pending invitation,1. Accept invite 2. Create user 3. Assign role,User created in correct org with correct role,Critical
+TC-INT-003,Integration,Onboarding Flow,Organization onboarding,New org created with org admin,Super admin exists,1. Create org 2. Create admin user 3. Assign role,Org and admin exist with correct permissions,Critical
+TC-INT-004,Integration,Database Setup,Complete seeding and validation,Database properly seeded and validated,Empty database,1. Run seedAll() 2. Validate state,Root org + default org + roles all exist and valid,Critical
+TC-HOOK-001,useUser Hook,Data Fetching,Fetch user on mount,Hook fetches user data when component mounts,User authenticated,1. Render component with useUser,User data loaded,High
+TC-HOOK-002,useUser Hook,Data Fetching,Return required fields,Hook returns user/organization/userRoles/highestRole,User authenticated,1. Check hook return value,All required fields present,High
+TC-HOOK-003,useUser Hook,Computed Props,Return computed properties,Hook returns isUser/isSuperAdmin/isOrgAdmin/isAdmin/isMember,User authenticated,1. Check hook return value,All computed properties present,High
+TC-HOOK-004,useUser Hook,Role Checks,isSuperAdmin true for super admin,Hook correctly identifies super admin,Super admin logged in,1. Check isSuperAdmin,Returns true,High
+TC-HOOK-005,useUser Hook,Role Checks,isOrgAdmin true for org admin,Hook correctly identifies org admin,Org admin logged in,1. Check isOrgAdmin,Returns true,High
+TC-HOOK-006,useUser Hook,Role Checks,isAdmin true for any admin,Hook returns true for super admin or org admin,Admin logged in,1. Check isAdmin,Returns true,High
+TC-HOOK-007,useUser Hook,Role Checks,isMember true for member,Hook correctly identifies member,Member logged in,1. Check isMember,Returns true,High
+TC-HOOK-008,useUser Hook,Refresh,refreshUser re-fetches data,Calling refreshUser fetches latest user data,User data changed,1. Call refreshUser() 2. Check data,Updated data returned,Medium
