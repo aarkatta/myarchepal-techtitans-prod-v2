@@ -66,6 +66,11 @@ import AboutUs from "./pages/AboutUs";
 import SiteTimeMachine from "./pages/SiteTimeMachine";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
+import FormsList from "./pages/FormsList";
+import FormBuilder from "./pages/FormBuilder";
+import FormResponses from "./pages/FormResponses";
+import AssignedForms from "./pages/AssignedForms";
+import FillForm from "./pages/FillForm";
 
 // Create React Query client instance
 const queryClient = new QueryClient();
@@ -189,6 +194,40 @@ const App = () => {
               <AdminRoute>
                 <OrgAdminDashboard />
               </AdminRoute>
+            } />
+
+            {/* Form Builder routes (require Org Admin or Super Admin role) */}
+            <Route path="/forms" element={
+              <AdminRoute>
+                <FormsList />
+              </AdminRoute>
+            } />
+            <Route path="/forms/new" element={
+              <AdminRoute>
+                <FormBuilder />
+              </AdminRoute>
+            } />
+            <Route path="/forms/:formId/edit" element={
+              <AdminRoute>
+                <FormBuilder />
+              </AdminRoute>
+            } />
+            <Route path="/forms/:formId/responses" element={
+              <AdminRoute>
+                <FormResponses />
+              </AdminRoute>
+            } />
+
+            {/* Assigned Forms routes (for all authenticated users) */}
+            <Route path="/my-forms" element={
+              <ProtectedRoute>
+                <AssignedForms />
+              </ProtectedRoute>
+            } />
+            <Route path="/forms/fill/:assignmentId" element={
+              <ProtectedRoute>
+                <FillForm />
+              </ProtectedRoute>
             } />
 
             {/* Invitation acceptance route (public but requires valid token) */}

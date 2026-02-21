@@ -21,6 +21,8 @@ import {
   MessageSquare,
   Building2,
   Shield,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -84,7 +86,7 @@ export const SideNav = () => {
   const isExploreActive = exploreItems.some(item => isActive(item.path));
   const isGiftShopActive = giftShopItems.some(item => isActive(item.path));
   const isAccountActive = accountItems.some(item => isActive(item.path));
-  const isAdminActive = isActive('/admin') || isActive('/org-dashboard');
+  const isAdminActive = isActive('/admin') || isActive('/org-dashboard') || location.pathname.startsWith('/forms');
 
   const handleLogout = async () => {
     try {
@@ -229,6 +231,18 @@ export const SideNav = () => {
                 <Building2 className="w-4 h-4" />
                 Organization
               </button>
+              {/* Forms - for all admins */}
+              <button
+                onClick={() => navigate('/forms')}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
+                  location.pathname.startsWith('/forms') && !location.pathname.includes('/fill/')
+                    ? "text-primary bg-primary/5"
+                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Forms
+              </button>
               {/* Super Admin Dashboard - only for super admins */}
               {isSuperAdmin && (
                 <button
@@ -245,6 +259,23 @@ export const SideNav = () => {
               )}
             </CollapsibleContent>
           </Collapsible>
+        )}
+
+        {/* My Forms - for all authenticated users */}
+        {isAuthenticated && (
+          <button
+            onClick={() => navigate("/my-forms")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-1 ${
+              isActive("/my-forms") || location.pathname.includes('/forms/fill/')
+                ? "bg-primary/10 text-primary"
+                : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <ClipboardList className={`w-5 h-5 transition-transform group-hover:scale-110 ${
+              isActive("/my-forms") || location.pathname.includes('/forms/fill/') ? "text-primary" : ""
+            }`} />
+            <span>My Forms</span>
+          </button>
         )}
 
         {/* Gift Shop Collapsible */}
