@@ -307,9 +307,9 @@ service cloud.firestore {
                    && (isAnyAdmin()
                        || (getUserData().role == 'MEMBER'
                            && resource.data.consultantId == request.auth.uid));
-      // Only the assigned MEMBER consultant can create a submission
+      // Assigned consultant (MEMBER or ORG_ADMIN) can create a submission
       allow create: if request.auth != null
-                     && getUserData().role == 'MEMBER'
+                     && (getUserData().role == 'MEMBER' || isAnyAdmin())
                      && request.resource.data.consultantId == request.auth.uid;
       // MEMBER can update only their own draft; ORG_ADMIN can update any (for protected fields)
       allow update: if request.auth != null

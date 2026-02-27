@@ -318,6 +318,16 @@ Phase 4 (form fill + offline) → Phase 6 (routing) → Phase 7 (validation)
 - ✅ 7.2 — Coordinate validation schemas (`src/lib/coordinateSchemas.ts`) — `LatLngSchema` + `UTMSchema` (Zod); `CoordinatesLatLngField.tsx` + `CoordinatesUTMField.tsx` updated with Controller `rules.validate` that handle optional vs required coordinates and range checks
 - ✅ 7.3 — Submission Detail page (`src/pages/SubmissionDetail.tsx`, route `/submission/:siteId/:submissionId`) — read-only field display grouped by section; file thumbnails + links; repeating-group tables; data reliability bar + export PDF/CSV buttons (calls FastAPI with Bearer token); ORG_ADMIN can edit protected section text/number/date/textarea fields inline
 
+**Bug Fixes & Improvements (post-Phase 7):**
+- ✅ `NewSite.tsx` — full rewrite as 2-step wizard: Step 1 = site name + description + image upload; Step 2 = choose published template from grid (or skip); saves as `status: 'draft'`; admin-only guard; navigates to `/site/:id` after creation
+- ✅ `src/services/sites.ts` — added `'draft'` to `Site.status` union type
+- ✅ `ConsultantPicker.tsx` — now shows both `ORG_ADMIN` and `MEMBER` (sorted admins first); role badge on each item; updated placeholder/empty text
+- ✅ `AssignForm.tsx` — reassignment UX: blue banner shows current assignee + "Clear" button to unassign; button label shows selected member name; `isReassign` flag toggles Assign/Reassign copy
+- ✅ `SiteDetails.tsx` — "Fill Out Form" / "Continue Form" button added inside the Form Assignment card when `site.assignedConsultantId === user.uid`; allows ORG_ADMINs assigned to their own site to fill the form; submitted state shows "Form has been submitted"
+- ✅ `TemplateImportPDF.tsx` — added `InlineOptionsEditor` component in review step for select/multiselect/radio/checkbox field types; removed `sourcePdfStoragePath: undefined` (Firestore rejects explicit `undefined`)
+- ✅ `siteTemplates.ts` — `createTemplate` strips all `undefined` values via `Object.entries(...).filter` before calling `addDoc`; prevents Firestore "Unsupported field value: undefined" errors
+- ✅ `firestore.rules` — `Sites/{siteId}/submissions` create rule: changed from `role == 'MEMBER'` only → `role == 'MEMBER' || isAnyAdmin()`; allows ORG_ADMINs to create submissions for sites assigned to them
+
 **Next tasks:** Phase 7 is complete. All planned dynamic-form feature phases are implemented.
 
 **AI model:**

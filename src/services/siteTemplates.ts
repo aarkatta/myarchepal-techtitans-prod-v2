@@ -26,11 +26,12 @@ export class SiteTemplatesService {
   ): Promise<string> {
     if (!db) throw new Error('Firebase is not properly initialized');
     const ref = collection(db, 'siteTemplates');
-    const docRef = await addDoc(ref, {
-      ...data,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
+    // Strip undefined values — Firestore rejects them
+    const clean = Object.fromEntries(
+      Object.entries({ ...data, createdAt: Timestamp.now(), updatedAt: Timestamp.now() })
+        .filter(([, v]) => v !== undefined)
+    );
+    const docRef = await addDoc(ref, clean);
     return docRef.id;
   }
 

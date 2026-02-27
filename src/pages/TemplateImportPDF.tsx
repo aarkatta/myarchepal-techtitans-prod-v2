@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Upload, FileText, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, FileText, Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,63 @@ const FIELD_TYPES: FieldType[] = [
   'section_header', 'divider',
 ];
 
+const TYPES_WITH_OPTIONS: FieldType[] = ['select', 'multiselect', 'radio', 'checkbox'];
+
 type Step = 'upload' | 'parsing' | 'review' | 'saving';
+
+// ---------------------------------------------------------------------------
+// InlineOptionsEditor
+// ---------------------------------------------------------------------------
+
+function InlineOptionsEditor({
+  options,
+  onChange,
+}: {
+  options: string[];
+  onChange: (opts: string[]) => void;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const addOption = () => {
+    const val = draft.trim();
+    if (!val) return;
+    onChange([...options, val]);
+    setDraft('');
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1 items-center pt-0.5 pb-1 pl-1">
+      <span className="text-xs text-muted-foreground shrink-0 mr-0.5">Options:</span>
+      {options.length === 0 && (
+        <span className="text-xs text-muted-foreground italic">None — type below to add</span>
+      )}
+      {options.map((opt, i) => (
+        <Badge key={i} variant="secondary" className="text-xs gap-1 pr-1 h-5">
+          {opt}
+          <button
+            type="button"
+            className="ml-0.5 text-muted-foreground hover:text-destructive"
+            onClick={() => onChange(options.filter((_, idx) => idx !== i))}
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        </Badge>
+      ))}
+      <div className="flex items-center gap-1">
+        <Input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOption(); } }}
+          placeholder="Add option…"
+          className="h-5 text-xs w-28 px-1.5"
+        />
+        <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={addOption}>
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -157,7 +213,6 @@ export default function TemplateImportPDF() {
         siteType: siteType.trim() || 'Unknown',
         sourceType: 'pdf_digitized',
         status: 'draft',
-        sourcePdfStoragePath: undefined,
         createdBy: user.uid,
         fieldCount: fields.length,
       });
@@ -373,48 +428,54 @@ export default function TemplateImportPDF() {
 
                   {/* Fields */}
                   {fieldsBySection(section.id).map(f => (
-                    <div
-                      key={f.id}
-                      className="grid grid-cols-[1fr_180px_80px_80px_36px] gap-2 items-center py-1"
-                    >
-                      <Input
-                        value={f.label}
-                        onChange={e => updateField(f.id, { label: e.target.value })}
-                        className="h-8 text-sm"
-                      />
-                      <Select
-                        value={f.fieldType}
-                        onValueChange={val => updateField(f.id, { fieldType: val as FieldType })}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FIELD_TYPES.map(t => (
-                            <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex justify-center">
-                        <Switch
-                          checked={f.isRequired}
-                          onCheckedChange={v => updateField(f.id, { isRequired: v })}
+                    <div key={f.id} className="space-y-0">
+                      <div className="grid grid-cols-[1fr_180px_80px_80px_36px] gap-2 items-center py-1">
+                        <Input
+                          value={f.label}
+                          onChange={e => updateField(f.id, { label: e.target.value })}
+                          className="h-8 text-sm"
                         />
+                        <Select
+                          value={f.fieldType}
+                          onValueChange={val => updateField(f.id, { fieldType: val as FieldType })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FIELD_TYPES.map(t => (
+                              <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={f.isRequired}
+                            onCheckedChange={v => updateField(f.id, { isRequired: v })}
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={f.isProtected}
+                            onCheckedChange={v => updateField(f.id, { isProtected: v })}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => deleteField(f.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                      <div className="flex justify-center">
-                        <Switch
-                          checked={f.isProtected}
-                          onCheckedChange={v => updateField(f.id, { isProtected: v })}
+                      {/* Options editor — shown for select/multiselect/radio/checkbox */}
+                      {TYPES_WITH_OPTIONS.includes(f.fieldType) && (
+                        <InlineOptionsEditor
+                          options={f.options ?? []}
+                          onChange={opts => updateField(f.id, { options: opts })}
                         />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteField(f.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      )}
                     </div>
                   ))}
 

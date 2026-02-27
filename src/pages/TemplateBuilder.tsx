@@ -458,7 +458,6 @@ export default function TemplateBuilder() {
         siteType: siteType.trim(),
         sourceType: 'blank_canvas',
         status: 'draft',
-        sourcePdfStoragePath: undefined,
         createdBy: user.uid,
         fieldCount: fields.length,
       });

@@ -772,6 +772,27 @@ const SiteDetails = () => {
                     <span className="capitalize">{site.submissionStatus.replace('_', ' ')}</span>
                   </div>
                 )}
+
+                {/* Fill Form — shown when THIS admin is the one assigned */}
+                {site.linkedTemplateId && user && site.assignedConsultantId === user.uid &&
+                  site.submissionStatus !== 'submitted' && site.submissionStatus !== 'reviewed' && (
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate(`/form/${site.id}`)}
+                  >
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    {site.submissionStatus === 'in_progress' ? 'Continue Form' : 'Fill Out Form'}
+                  </Button>
+                )}
+
+                {/* Submitted state */}
+                {site.assignedConsultantId === user?.uid &&
+                  (site.submissionStatus === 'submitted' || site.submissionStatus === 'reviewed') && (
+                  <p className="text-sm text-center text-muted-foreground py-1">
+                    Form has been submitted.
+                  </p>
+                )}
+
                 {site.linkedTemplateId && (
                   <Button
                     className="w-full"
@@ -779,7 +800,7 @@ const SiteDetails = () => {
                     onClick={() => navigate(`/assign-form/${site.id}`)}
                   >
                     <UserPlus className="w-4 h-4 mr-2" />
-                    {site.assignedConsultantId ? 'Reassign Consultant' : 'Assign to Consultant'}
+                    {site.assignedConsultantId ? 'Reassign to Another Member' : 'Assign to a Team Member'}
                   </Button>
                 )}
                 {!site.linkedTemplateId && (

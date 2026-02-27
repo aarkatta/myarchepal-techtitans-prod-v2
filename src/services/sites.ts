@@ -37,7 +37,7 @@ export interface Site {
   period?: string;
   artifacts?: string[];
   images?: string[];
-  status: 'active' | 'inactive' | 'archived';
+  status: 'draft' | 'active' | 'inactive' | 'archived';
   createdAt?: Date | Timestamp;
   updatedAt?: Date | Timestamp;
   createdBy?: string;

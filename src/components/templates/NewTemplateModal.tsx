@@ -125,7 +125,6 @@ export default function NewTemplateModal({ open, onOpenChange }: NewTemplateModa
         siteType: t.siteType,
         sourceType: 'customized',
         status: 'draft',
-        sourcePdfStoragePath: undefined,
         createdBy: user.uid,
         fieldCount: fields.length,
       });

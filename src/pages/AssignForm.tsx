@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { UserCheck, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { UserCheck, ArrowLeft, AlertCircle, Loader2, Users, RefreshCw, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ResponsiveLayout } from '@/components/ResponsiveLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -8,7 +8,9 @@ import { AccountButton } from '@/components/AccountButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { SitesService, type Site } from '@/services/sites';
 import { SiteTemplatesService } from '@/services/siteTemplates';
 import { SiteAssignmentsService } from '@/services/siteAssignments';
@@ -27,7 +29,9 @@ const AssignForm = () => {
 
   const [selectedUid, setSelectedUid] = useState('');
   const [selectedEmail, setSelectedEmail] = useState('');
+  const [selectedName, setSelectedName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
 
   useEffect(() => {
     if (!siteId) return;
@@ -50,18 +54,42 @@ const AssignForm = () => {
       .finally(() => setLoadingSite(false));
   }, [siteId]);
 
+  const isReassign = !!site?.assignedConsultantId;
+
   const handleAssign = async () => {
     if (!siteId || !selectedUid || !selectedEmail) return;
     setSaving(true);
     try {
       await SiteAssignmentsService.assignConsultant(siteId, selectedUid, selectedEmail);
-      toast.success('Consultant assigned successfully');
+      toast.success(isReassign ? 'Site reassigned successfully.' : 'Site assigned successfully.');
       navigate('/admin-assignments');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to assign consultant. Please try again.');
+      toast.error('Failed to assign. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (!siteId) return;
+    setUnassigning(true);
+    try {
+      await SitesService.updateSite(siteId, {
+        assignedConsultantId: undefined,
+        assignedConsultantEmail: undefined,
+        submissionStatus: undefined,
+      });
+      setSite(prev => prev ? { ...prev, assignedConsultantId: undefined, assignedConsultantEmail: undefined } : prev);
+      setSelectedUid('');
+      setSelectedEmail('');
+      setSelectedName('');
+      toast.success('Assignment cleared.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to clear assignment.');
+    } finally {
+      setUnassigning(false);
     }
   };
 
@@ -89,8 +117,10 @@ const AssignForm = () => {
 
         {/* Title */}
         <div className="flex items-center gap-3">
-          <UserCheck className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Assign Form</h1>
+          <Users className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold">
+            {isReassign ? 'Reassign Site' : 'Assign Site'}
+          </h1>
         </div>
 
         {loadingSite ? (
@@ -136,12 +166,12 @@ const AssignForm = () => {
                     {template ? template.name : 'None'}
                   </span>
                 </div>
-                {site.assignedConsultantEmail && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Currently Assigned</span>
-                    <span className="text-blue-600 dark:text-blue-400">{site.assignedConsultantEmail}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Assignment Status</span>
+                  <Badge variant={site.assignedConsultantEmail ? 'default' : 'secondary'} className="text-xs">
+                    {site.assignedConsultantEmail ? 'Assigned' : 'Unassigned'}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
 
@@ -155,22 +185,64 @@ const AssignForm = () => {
               </Alert>
             )}
 
-            {/* Consultant picker */}
+            {/* Assignment card */}
             {site.linkedTemplateId && organization?.id && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Select Field Consultant</CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <UserCheck className="w-4 h-4" />
+                    {isReassign ? 'Reassign to a Team Member' : 'Assign to a Team Member'}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Choose a MEMBER from your organization to fill out this form.
-                  </p>
+
+                  {/* Current assignee banner */}
+                  {site.assignedConsultantEmail && (
+                    <>
+                      <div className="flex items-center justify-between rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wide">
+                            Currently Assigned To
+                          </p>
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                            {site.assignedConsultantEmail}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                          onClick={handleUnassign}
+                          disabled={unassigning}
+                        >
+                          {unassigning
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <XCircle className="w-3.5 h-3.5" />
+                          }
+                          Clear
+                        </Button>
+                      </div>
+                      <Separator />
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                        Select a different team member below to reassign:
+                      </p>
+                    </>
+                  )}
+
+                  {!site.assignedConsultantEmail && (
+                    <p className="text-sm text-muted-foreground">
+                      Choose any active team member — admins or field consultants — to fill out this form.
+                    </p>
+                  )}
+
                   <ConsultantPicker
                     orgId={organization.id}
                     value={selectedUid}
-                    onSelect={(uid, email) => {
+                    onSelect={(uid, email, name) => {
                       setSelectedUid(uid);
                       setSelectedEmail(email);
+                      setSelectedName(name);
                     }}
                   />
 
@@ -182,12 +254,17 @@ const AssignForm = () => {
                     {saving ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Assigning...
+                        {isReassign ? 'Reassigning…' : 'Assigning…'}
+                      </>
+                    ) : isReassign ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Reassign to {selectedName || 'Selected Member'}
                       </>
                     ) : (
                       <>
                         <UserCheck className="w-4 h-4 mr-2" />
-                        {site.assignedConsultantId ? 'Reassign Consultant' : 'Assign Consultant'}
+                        Assign to {selectedName || 'Selected Member'}
                       </>
                     )}
                   </Button>
