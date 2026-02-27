@@ -13,7 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { SitesService } from "@/services/sites";
+import { SiteTemplatesService } from "@/services/siteTemplates";
 import { Timestamp } from "firebase/firestore";
+import type { SiteTemplate } from "@/types/siteTemplates";
 import { useAuth } from "@/hooks/use-auth";
 import { useUser } from "@/hooks/use-user";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
@@ -36,6 +38,7 @@ const NewSite = () => {
   const { hideKeyboard } = useKeyboard();
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const [publishedTemplates, setPublishedTemplates] = useState<SiteTemplate[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
@@ -82,7 +85,10 @@ const NewSite = () => {
     period: "",
     status: "active",
     dateDiscovered: new Date().toISOString().split('T')[0],
-    notes: ""
+    notes: "",
+    stateSiteNumber: "",
+    siteType: "",
+    linkedTemplateId: "",
   });
 
   // Get user's location on component mount
@@ -194,6 +200,14 @@ const NewSite = () => {
       }
     }
   }, [toast]);
+
+  // Load published templates for ORG_ADMIN
+  useEffect(() => {
+    if (!organization?.id || !isOrgAdmin) return;
+    SiteTemplatesService.listTemplates(organization.id)
+      .then(tmpls => setPublishedTemplates(tmpls.filter(t => t.status === 'published')))
+      .catch(console.error);
+  }, [organization?.id, isOrgAdmin]);
 
   const toggleRecording = () => {
     if (!recognition) {
@@ -340,8 +354,11 @@ const NewSite = () => {
         images: [],
         createdBy: user?.uid || "anonymous",
         notes: formData.notes || "",
-        organizationId: organization?.id, // Set organizationId from user's organization
-        visibility: isProOrg ? visibility : 'private' // Only Pro/Enterprise orgs can set visibility
+        organizationId: organization?.id,
+        visibility: isProOrg ? visibility : 'private',
+        ...(formData.stateSiteNumber && { stateSiteNumber: formData.stateSiteNumber }),
+        ...(formData.siteType && { siteType: formData.siteType }),
+        ...(formData.linkedTemplateId && { linkedTemplateId: formData.linkedTemplateId }),
       };
 
       const siteId = await SitesService.createSite(siteData);
@@ -526,6 +543,70 @@ const NewSite = () => {
                   required
                 />
               </div>
+
+              {/* NC-specific fields — shown for Org Admins in Pro/Enterprise orgs */}
+              {isProOrg && isOrgAdmin && (
+                <>
+                  <div>
+                    <Label htmlFor="stateSiteNumber">State Site Number (Optional)</Label>
+                    <Input
+                      id="stateSiteNumber"
+                      name="stateSiteNumber"
+                      placeholder="31-___"
+                      value={formData.stateSiteNumber}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="siteType">Site Type (Optional)</Label>
+                    <Select
+                      value={formData.siteType}
+                      onValueChange={value => handleSelectChange(value, "siteType")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select site type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cemetery">Cemetery</SelectItem>
+                        <SelectItem value="Habitation">Habitation</SelectItem>
+                        <SelectItem value="Rock Art">Rock Art</SelectItem>
+                        <SelectItem value="Lithic Scatter">Lithic Scatter</SelectItem>
+                        <SelectItem value="Midden">Midden</SelectItem>
+                        <SelectItem value="Shell Ring">Shell Ring</SelectItem>
+                        <SelectItem value="Earthwork">Earthwork</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="linkedTemplateId">Form Template (Optional)</Label>
+                    <Select
+                      value={formData.linkedTemplateId}
+                      onValueChange={value => handleSelectChange(value, "linkedTemplateId")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Link a published template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {publishedTemplates
+                          .filter(t => !formData.siteType || t.siteType === formData.siteType)
+                          .map(t => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        {publishedTemplates.length === 0 && (
+                          <SelectItem value="__none" disabled>
+                            No published templates yet
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               <div>
                 <Label htmlFor="description">Description (Optional)</Label>

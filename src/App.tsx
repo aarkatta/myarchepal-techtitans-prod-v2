@@ -66,11 +66,15 @@ import AboutUs from "./pages/AboutUs";
 import SiteTimeMachine from "./pages/SiteTimeMachine";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
-import FormsList from "./pages/FormsList";
-import FormBuilder from "./pages/FormBuilder";
-import FormResponses from "./pages/FormResponses";
-import AssignedForms from "./pages/AssignedForms";
-import FillForm from "./pages/FillForm";
+import TemplateList from "./pages/TemplateList";
+import TemplateImportPDF from "./pages/TemplateImportPDF";
+import TemplateEditor from "./pages/TemplateEditor";
+import TemplateBuilder from "./pages/TemplateBuilder";
+import AdminSiteAssignments from "./pages/AdminSiteAssignments";
+import AssignForm from "./pages/AssignForm";
+import MyAssignments from "./pages/MyAssignments";
+import FormFill from "./pages/FormFill";
+import SubmissionDetail from "./pages/SubmissionDetail";
 
 // Create React Query client instance
 const queryClient = new QueryClient();
@@ -196,38 +200,55 @@ const App = () => {
               </AdminRoute>
             } />
 
-            {/* Form Builder routes (require Org Admin or Super Admin role) */}
-            <Route path="/forms" element={
+            {/* Template management routes */}
+            <Route path="/templates" element={
               <AdminRoute>
-                <FormsList />
+                <TemplateList />
               </AdminRoute>
             } />
-            <Route path="/forms/new" element={
+            <Route path="/templates/new/pdf" element={
               <AdminRoute>
-                <FormBuilder />
+                <TemplateImportPDF />
               </AdminRoute>
             } />
-            <Route path="/forms/:formId/edit" element={
+            <Route path="/templates/:templateId/edit" element={
               <AdminRoute>
-                <FormBuilder />
+                <TemplateEditor />
               </AdminRoute>
             } />
-            <Route path="/forms/:formId/responses" element={
+            <Route path="/templates/new/blank" element={
               <AdminRoute>
-                <FormResponses />
+                <TemplateBuilder />
               </AdminRoute>
             } />
 
-            {/* Assigned Forms routes (for all authenticated users) */}
-            <Route path="/my-forms" element={
+            {/* Phase 4 — Consultant routes */}
+            <Route path="/my-assignments" element={
               <ProtectedRoute>
-                <AssignedForms />
+                <MyAssignments />
               </ProtectedRoute>
             } />
-            <Route path="/forms/fill/:assignmentId" element={
+            <Route path="/form/:siteId" element={
               <ProtectedRoute>
-                <FillForm />
+                <FormFill />
               </ProtectedRoute>
+            } />
+            <Route path="/submission/:siteId/:submissionId" element={
+              <ProtectedRoute>
+                <SubmissionDetail />
+              </ProtectedRoute>
+            } />
+
+            {/* Phase 3 — Site assignment routes */}
+            <Route path="/admin-assignments" element={
+              <AdminRoute>
+                <AdminSiteAssignments />
+              </AdminRoute>
+            } />
+            <Route path="/assign-form/:siteId" element={
+              <AdminRoute>
+                <AssignForm />
+              </AdminRoute>
             } />
 
             {/* Invitation acceptance route (public but requires valid token) */}
