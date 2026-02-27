@@ -7,8 +7,10 @@ import type { FieldComponentProps } from './_types';
 export default function MultiSelectField({ field, control, mode }: FieldComponentProps) {
   const disabled = mode === 'preview';
 
-  // Single boolean checkbox
-  if (field.fieldType === 'checkbox') {
+  // Single boolean checkbox — only when there are NO options
+  // (GPT-4o sometimes sets fieldType:"checkbox" but still provides options[] for a
+  // grouped check-all-that-apply list; fall through to the multi-option path in that case)
+  if (field.fieldType === 'checkbox' && !(field.options?.length)) {
     return (
       <Controller
         name={field.id}
@@ -38,7 +40,7 @@ export default function MultiSelectField({ field, control, mode }: FieldComponen
     );
   }
 
-  // Multi-option checkboxes
+  // Multi-option checkboxes (multiselect, or checkbox with an options list)
   const options = field.options ?? [];
 
   return (
@@ -63,6 +65,9 @@ export default function MultiSelectField({ field, control, mode }: FieldComponen
               {field.label}
               {field.isRequired && <span className="text-destructive ml-1">*</span>}
             </Label>
+            {options.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">No options configured for this field.</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {options.map(option => (
                 <div key={option} className="flex items-center gap-2">

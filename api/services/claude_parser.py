@@ -65,9 +65,10 @@ fieldType rules — choose the most appropriate:
 - "number"              for numeric inputs (counts, measurements, percentages)
 - "date"                for date fields
 - "radio"               for mutually exclusive choices (Yes/No, pick one)
-- "checkbox"            for a single boolean tick box
+- "checkbox"            ONLY for a single standalone boolean tick box (e.g. "I agree", "Check if applicable")
 - "select"              for single-choice dropdowns
-- "multiselect"         for checkboxes where multiple can be selected simultaneously
+- "multiselect"         for ANY group of checkboxes where multiple can be ticked (e.g. "check all that apply",
+                        condition lists, feature lists) — ALWAYS populate "options" with every label in the group
 - "coordinates_latlong" for latitude/longitude coordinate pairs
 - "coordinates_utm"     for UTM coordinate fields (Zone, Easting, Northing)
 - "file_upload"         for photo, map, or document attachment fields
@@ -80,7 +81,9 @@ Additional rules:
 - Set isRequired: true only when the form explicitly marks a field as required.
 - Generate stable, unique, kebab-case IDs per field (e.g. "cemetery-name", "state-site-number").
 - Preserve the visual order of sections and fields exactly as they appear top-to-bottom.
-- For radio/select/multiselect fields include ALL listed options in the "options" array.
+- For radio/select/multiselect fields include ALL listed options in the "options" array — never leave it null.
+- If a group of checkboxes shares a common label/question, model it as ONE multiselect field with that
+  label and all checkbox labels as options. Do NOT create separate checkbox fields for each tick box.
 - For repeating_group fields, include a "groupFields" array with the sub-field definitions
   (same schema as a regular field, without nested groupFields).
 - For fields with conditional visibility (e.g. "If Yes, explain"), set conditionalLogic:
