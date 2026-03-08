@@ -24,6 +24,7 @@ import { useUser } from '@/hooks/use-user';
 import { SiteTemplatesService } from '@/services/siteTemplates';
 import type { SiteTemplate } from '@/types/siteTemplates';
 import NewTemplateModal from '@/components/templates/NewTemplateModal';
+import { ResponsiveLayout } from '@/components/ResponsiveLayout';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -150,6 +151,7 @@ export default function TemplateList() {
   // ---------------------------------------------------------------------------
 
   return (
+    <ResponsiveLayout>
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
       {/* Header */}
@@ -313,5 +315,6 @@ export default function TemplateList() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </ResponsiveLayout>
   );
 }

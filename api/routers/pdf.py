@@ -1,8 +1,9 @@
 """
 POST /api/parse-pdf
 
-Receives a base64-encoded PDF from the frontend, sends it to Claude Sonnet 4.6
-via Azure AI Foundry, and returns the extracted form template structure.
+Receives a base64-encoded PDF from the frontend, sends it directly to
+Claude Opus 4.6 as a native document block, and returns the extracted
+form template (sections + fields).
 """
 
 from fastapi import APIRouter, HTTPException
@@ -39,7 +40,7 @@ async def parse_pdf(body: ParsePdfRequest):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Claude parsing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"PDF parsing failed: {str(e)}")
 
     return ParsePdfResponse(
         template_name=result.get("templateName", "Untitled Form"),

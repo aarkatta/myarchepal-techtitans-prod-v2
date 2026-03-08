@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # Must happen BEFORE importing routers so env vars are set when modules load.
 _api_dir = Path(__file__).parent
 load_dotenv(_api_dir / ".env")                   # api/.env  — backend secrets
-load_dotenv(_api_dir.parent / ".env")            # root .env — shared Azure/Firebase client vars
+load_dotenv(_api_dir.parent / ".env")            # root .env — shared Firebase/Claude/OpenAI vars
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
