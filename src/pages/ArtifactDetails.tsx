@@ -658,16 +658,32 @@ const ArtifactDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {artifact.videos.map((url, i) => (
-                  <video
-                    key={i}
-                    src={url}
-                    controls
-                    className="w-full rounded-lg border border-border max-h-96"
-                  >
-                    Your browser does not support video playback.
-                  </video>
-                ))}
+                {artifact.videos.map((url, i) => {
+                  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                  if (ytMatch) {
+                    return (
+                      <div key={i} className="relative w-full aspect-video">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                          title={`Video ${i + 1}`}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="absolute inset-0 w-full h-full rounded-lg border border-border"
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <video
+                      key={i}
+                      src={url}
+                      controls
+                      className="w-full rounded-lg border border-border max-h-96"
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  );
+                })}
               </CardContent>
             </Card>
           )}
