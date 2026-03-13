@@ -7,3 +7,4 @@ firebase-admin
 aiosmtplib
 python-dotenv
 reportlab
+httpx

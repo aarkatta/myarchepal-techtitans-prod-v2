@@ -8,6 +8,7 @@ GPT-4o, and returns a structured form template (sections + fields).
 import base64
 import io
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -16,6 +17,10 @@ from typing import Any
 import pdfplumber
 from openai import AzureOpenAI
 from dotenv import load_dotenv
+
+from api.services.crashvault import capture_exception, log_info
+
+logger = logging.getLogger("archepal.services.claude_parser")
 
 # Load env vars from project root .env (two levels up from api/services/)
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
@@ -121,9 +126,13 @@ def parse_pdf_with_claude(base64_pdf: str) -> dict[str, Any]:
     api_version = os.environ.get("VITE_AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 
     # Extract text from PDF
+    logger.info("Extracting text from PDF (%d base64 chars)", len(base64_pdf))
     pdf_text = _extract_text_from_base64_pdf(base64_pdf)
     if not pdf_text:
+        logger.error("No text extracted from PDF")
         raise ValueError("Could not extract any text from the uploaded PDF.")
+
+    logger.info("PDF text extracted — %d characters, sending to %s", len(pdf_text), deployment)
 
     client = AzureOpenAI(
         azure_endpoint=endpoint,
@@ -142,10 +151,21 @@ def parse_pdf_with_claude(base64_pdf: str) -> dict[str, Any]:
     )
 
     raw_text = response.choices[0].message.content or ""
+    usage = response.usage
+    logger.info("GPT-4o response received — %d chars, tokens: prompt=%s completion=%s",
+                len(raw_text),
+                getattr(usage, "prompt_tokens", "?"),
+                getattr(usage, "completion_tokens", "?"))
 
     # Strip optional markdown code fences (```json ... ```)
     json_match = re.search(r"\{[\s\S]*\}", raw_text)
     if not json_match:
+        logger.error("GPT-4o returned no JSON — raw response: %s", raw_text[:500])
         raise ValueError(f"GPT-4o returned no JSON. Raw response:\n{raw_text[:500]}")
 
-    return json.loads(json_match.group())
+    result = json.loads(json_match.group())
+    logger.info("Parse complete — template=%s sections=%d fields=%d",
+                result.get("templateName", "?"),
+                len(result.get("sections", [])),
+                len(result.get("fields", [])))
+    return result
