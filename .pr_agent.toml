@@ -1,0 +1,15 @@
+[config]
+model = "deepseek/deepseek-chat"
+model_turbo = "deepseek/deepseek-chat"
+
+[pr_reviewer]
+require_score_label = false
+enable_review_labels_security = true
+enable_review_labels_effort = true
+
+[pr_description]
+publish_labels = true
+generate_ai_title = true
+
+[pr_code_suggestions]
+num_code_suggestions = 4
