@@ -3,6 +3,8 @@ import { auth } from '@/lib/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   sendPasswordResetEmail
 } from "firebase/auth";
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { UserService } from '@/services/users';
 import { UserRoleService } from '@/services/userRoles';
 import { DEFAULT_ORGANIZATION_ID, ROLE_IDS } from '@/types/organization';
-import { Loader2, Mail, Lock, GraduationCap, CheckCircle, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, GraduationCap, CheckCircle, User, Eye, EyeOff, Chrome } from 'lucide-react';
 import { useKeyboard } from '@/hooks/use-keyboard';
 
 interface ArchaeologistAuthProps {
@@ -219,6 +221,43 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
         description: error.message || "Failed to send reset email",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!auth) {
+      toast({ title: "Error", description: "Firebase authentication is not initialized", variant: "destructive" });
+      return;
+    }
+    const provider = new GoogleAuthProvider();
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // Create user profile if it doesn't exist yet
+      const existing = await UserService.getByUid(result.user.uid);
+      if (!existing) {
+        await UserService.create({
+          uid: result.user.uid,
+          email: result.user.email || '',
+          displayName: result.user.displayName || result.user.email?.split('@')[0] || '',
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          role: 'MEMBER',
+          institution: '',
+          specialization: '',
+          credentials: '',
+        });
+        await UserRoleService.create({
+          userId: result.user.uid,
+          roleId: ROLE_IDS.MEMBER,
+          organizationId: DEFAULT_ORGANIZATION_ID,
+        });
+      }
+      toast({ title: "Welcome!", description: "Successfully signed in with Google" });
+      onAuthSuccess?.();
+    } catch (error: any) {
+      toast({ title: "Google Sign In Failed", description: error.message || "Failed to sign in with Google", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -444,6 +483,24 @@ export const ArchaeologistAuth: React.FC<ArchaeologistAuthProps> = ({
             </Button>
           </div>
         )}
+
+        <div className="relative my-2">
+          <Separator />
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-xs text-muted-foreground">
+            OR
+          </span>
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={handleGoogleSignIn}
+          className="w-full"
+          disabled={loading}
+          type="button"
+        >
+          <Chrome className="w-4 h-4 mr-2" />
+          Continue with Google
+        </Button>
 
         <div className="text-center">
           <Button
