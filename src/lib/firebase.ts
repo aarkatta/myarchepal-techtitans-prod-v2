@@ -1,10 +1,14 @@
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  Firestore,
+} from 'firebase/firestore';
 import { getAuth, Auth, indexedDBLocalPersistence, initializeAuth } from 'firebase/auth';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { Capacitor } from '@capacitor/core';
 
-// Your Firebase configuration
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,59 +17,62 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
 
-// Check if we have valid configuration
-const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId;
+const isConfigValid =
+  !!firebaseConfig.apiKey && !!firebaseConfig.projectId && !!firebaseConfig.appId;
 
 if (!isConfigValid) {
-  console.warn('⚠️ Firebase configuration is missing or invalid!');
-  console.warn('Please check your .env file and ensure all Firebase variables are set.');
+  console.warn('⚠️ Firebase configuration is missing. Check your .env file.');
 }
 
-// Initialize Firebase
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 let auth: Auth | undefined;
 let storage: FirebaseStorage | undefined;
 
+// Always initialize with current config — getApps() reuse can carry stale credentials
 try {
-  console.log('🔧 Initializing Firebase with config:', {
-    apiKey: firebaseConfig.apiKey ? '✅ Set' : '❌ Missing',
-    authDomain: firebaseConfig.authDomain ? '✅ Set' : '❌ Missing',
-    projectId: firebaseConfig.projectId ? '✅ Set' : '❌ Missing',
-    storageBucket: firebaseConfig.storageBucket ? '✅ Set' : '❌ Missing',
-    messagingSenderId: firebaseConfig.messagingSenderId ? '✅ Set' : '❌ Missing',
-    appId: firebaseConfig.appId ? '✅ Set' : '❌ Missing'
-  });
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+} catch (e) {
+  console.error('❌ Firebase app initialization failed:', e);
+}
 
-  const isNative = Capacitor.isNativePlatform();
-  console.log('📱 Running on:', isNative ? 'Native (Capacitor)' : 'Web Browser');
-
-  app = initializeApp(firebaseConfig);
-
-  // Initialize Firestore with settings optimized for mobile
-  db = getFirestore(app);
-
-  // For native platforms, use indexedDB persistence for auth to avoid GAPI issues
-  if (isNative) {
-    auth = initializeAuth(app, {
-      persistence: indexedDBLocalPersistence
-    });
-    console.log('🔐 Auth initialized with indexedDB persistence (native)');
-  } else {
-    auth = getAuth(app);
-    console.log('🔐 Auth initialized with default persistence (web)');
+// Firestore — initializeFirestore throws if already called on this app (HMR), fall back to getFirestore
+if (app) {
+  try {
+    db = initializeFirestore(app, { localCache: persistentLocalCache() });
+  } catch {
+    try {
+      db = getFirestore(app);
+    } catch (e) {
+      console.error('❌ Firestore initialization failed:', e);
+    }
   }
+}
 
-  storage = getStorage(app);
+// Auth — each service initializes independently so one failure never blocks another
+if (app) {
+  try {
+    const isNative = Capacitor.isNativePlatform();
+    if (isNative) {
+      auth = initializeAuth(app, { persistence: indexedDBLocalPersistence });
+    } else {
+      auth = getAuth(app);
+    }
+  } catch (e) {
+    console.error('❌ Firebase Auth initialization failed:', e);
+  }
+}
 
-  console.log('✅ Firebase initialized successfully');
-  console.log('🔥 Firestore database instance:', db ? '✅ Created' : '❌ Failed');
-} catch (error) {
-  console.error('❌ Firebase initialization error:', error);
-  console.error('Config values:', firebaseConfig);
+// Storage
+if (app) {
+  try {
+    storage = getStorage(app);
+  } catch (e) {
+    console.error('❌ Firebase Storage initialization failed:', e);
+  }
 }
 
 export { db, auth, storage };

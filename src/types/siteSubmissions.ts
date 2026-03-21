@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type SubmissionStatus = 'assigned' | 'in_progress' | 'submitted' | 'reviewed';
+export type SubmissionStatus = 'assigned' | 'in_progress' | 'submitted' | 'reviewed' | 'pending_template';
 
 export interface MediaAttachment {
   id: string;

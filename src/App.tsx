@@ -75,6 +75,7 @@ import AssignForm from "./pages/AssignForm";
 import MyAssignments from "./pages/MyAssignments";
 import FormFill from "./pages/FormFill";
 import SubmissionDetail from "./pages/SubmissionDetail";
+import UploadFilledForm from "./pages/UploadFilledForm";
 import { HelpButton } from "@/components/HelpButton";
 
 // Create React Query client instance
@@ -97,7 +98,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           {/* React Router for navigation - HashRouter for Capacitor compatibility */}
-          <HashRouter>
+          <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <HelpButton />
             <Routes>
             {/* Public routes */}
@@ -222,6 +223,13 @@ const App = () => {
               <AdminRoute>
                 <TemplateBuilder />
               </AdminRoute>
+            } />
+
+            {/* Upload filled form route */}
+            <Route path="/upload-filled-form" element={
+              <ProtectedRoute>
+                <UploadFilledForm />
+              </ProtectedRoute>
             } />
 
             {/* Phase 4 — Consultant routes */}

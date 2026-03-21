@@ -65,6 +65,17 @@ service cloud.firestore {
                      && resource.data.assignedConsultantId == request.auth.uid
                      && request.resource.data.diff(resource.data).affectedKeys()
                           .hasOnly(['submissionStatus', 'updatedAt']);
+      // MEMBER self-assigning during upload filled form wizard — can set link + assignment fields
+      // on a site with no current assignee OR already assigned to them.
+      // Must set assignedConsultantId to their own uid only.
+      allow update: if request.auth != null
+                     && isUser()
+                     && getUserData().role == 'MEMBER'
+                     && (resource.data.get('assignedConsultantId', '') == ''
+                         || resource.data.assignedConsultantId == request.auth.uid)
+                     && request.resource.data.assignedConsultantId == request.auth.uid
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['linkedTemplateId', 'assignedConsultantId', 'assignedConsultantEmail', 'submissionStatus', 'updatedAt']);
     }
 
     // Articles Collection - Public read, archaeologist write

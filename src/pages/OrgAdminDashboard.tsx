@@ -57,6 +57,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SitesService } from '@/services/sites';
 import type { Site } from '@/services/sites';
+import { SiteTemplatesService } from '@/services/siteTemplates';
 
 const OrgAdminDashboard = () => {
   const navigate = useNavigate();
@@ -79,6 +80,7 @@ const OrgAdminDashboard = () => {
   });
 
   const [assignmentSites, setAssignmentSites] = useState<Site[]>([]);
+  const [pendingTemplateReviews, setPendingTemplateReviews] = useState(0);
 
   // Load organization data
   useEffect(() => {
@@ -126,6 +128,19 @@ const OrgAdminDashboard = () => {
     if (!user?.organizationId) return;
     SitesService.getSitesByOrganization(user.organizationId)
       .then(setAssignmentSites)
+      .catch(console.error);
+  }, [user?.organizationId]);
+
+  // Load pending template review count (auto-generated drafts from filled form uploads)
+  useEffect(() => {
+    if (!user?.organizationId) return;
+    SiteTemplatesService.listTemplates(user.organizationId)
+      .then(templates => {
+        const count = templates.filter(
+          t => t.sourceType === 'filled_form_upload' && t.status === 'draft',
+        ).length;
+        setPendingTemplateReviews(count);
+      })
       .catch(console.error);
   }, [user?.organizationId]);
 
@@ -724,7 +739,7 @@ const OrgAdminDashboard = () => {
           {/* ── Assignments tab ── */}
           <TabsContent value="assignments" className="space-y-6">
             {/* Assignment stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               <Card>
                 <CardContent className="text-center p-4">
                   <p className="text-2xl font-bold">{assignmentSites.length}</p>
@@ -755,6 +770,21 @@ const OrgAdminDashboard = () => {
                     ).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Submitted</p>
+                </CardContent>
+              </Card>
+              <Card
+                className={`cursor-pointer transition-colors hover:bg-muted/30 ${
+                  pendingTemplateReviews > 0
+                    ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-950/10'
+                    : ''
+                }`}
+                onClick={() => navigate('/templates')}
+              >
+                <CardContent className="text-center p-4">
+                  <p className={`text-2xl font-bold ${pendingTemplateReviews > 0 ? 'text-amber-600' : ''}`}>
+                    {pendingTemplateReviews}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Template Reviews</p>
                 </CardContent>
               </Card>
             </div>

@@ -47,14 +47,14 @@ export class SiteAssignmentsService {
    */
   static async getMemberAssignments(
     consultantId: string,
-    orgId: string
+    orgId?: string
   ): Promise<Site[]> {
     if (!db) throw new Error('Firebase is not properly initialized');
-    const q = query(
-      collection(db, 'Sites'),
-      where('assignedConsultantId', '==', consultantId),
-      where('organizationId', '==', orgId)
-    );
+    // If we have an orgId, scope the query to that org; otherwise just filter by consultant.
+    const constraints = orgId
+      ? [where('assignedConsultantId', '==', consultantId), where('organizationId', '==', orgId)]
+      : [where('assignedConsultantId', '==', consultantId)];
+    const q = query(collection(db, 'Sites'), ...constraints);
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Site));
   }

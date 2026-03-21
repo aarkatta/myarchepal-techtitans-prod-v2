@@ -1,4 +1,4 @@
-import { Home, Compass, Plus, Heart, Newspaper, Package, PlusSquare, Calendar, Store, Menu, Users, User, Settings, Lock, Info, Mail, LogOut, ChevronRight, BookOpen, MessageSquare, Star, Building2, Shield, ClipboardList } from "lucide-react";
+import { Home, Compass, Plus, Heart, Newspaper, Package, PlusSquare, Calendar, Store, Menu, Users, User, Settings, Lock, Info, Mail, LogOut, ChevronRight, BookOpen, MessageSquare, Star, Building2, Shield, ClipboardList, Upload } from "lucide-react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useState } from "react";
 import { CreateSiteModal } from "@/components/CreateSiteModal";
@@ -240,7 +240,7 @@ export const BottomNav = () => {
             ) : isAuthenticated ? (
               // Account submenu
               <>
-                {/* My Assignments — MEMBER only */}
+                {/* My Assignments + Upload Form — MEMBER only */}
                 {isMember && !isAdmin && (
                   <>
                     <Button
@@ -262,6 +262,24 @@ export const BottomNav = () => {
                       <div className="text-left flex-1">
                         <div className="text-body font-semibold text-foreground font-sans leading-snug">My Assignments</div>
                         <div className="text-caption text-muted-foreground font-sans leading-snug">View and fill assigned forms</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
+                      onClick={() => handleMenuItemClick('/upload-filled-form')}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        location.pathname.startsWith('/upload-filled-form') ? 'bg-primary/20' : 'bg-muted'
+                      }`}>
+                        <Upload className={`w-5 h-5 ${
+                          location.pathname.startsWith('/upload-filled-form') ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                      </div>
+                      <div className="text-left flex-1">
+                        <div className="text-body font-semibold text-foreground font-sans leading-snug">Upload Paper Form</div>
+                        <div className="text-caption text-muted-foreground font-sans leading-snug">Scan or upload a filled form</div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </Button>
@@ -293,6 +311,24 @@ export const BottomNav = () => {
                 {isAuthenticated && isAdmin && (
                   <>
                     <div className="border-t border-border my-2" />
+                    <Button
+                      variant="ghost"
+                      className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
+                      onClick={() => handleMenuItemClick('/upload-filled-form')}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        location.pathname.startsWith('/upload-filled-form') ? 'bg-primary/20' : 'bg-muted'
+                      }`}>
+                        <Upload className={`w-5 h-5 ${
+                          location.pathname.startsWith('/upload-filled-form') ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                      </div>
+                      <div className="text-left flex-1">
+                        <div className="text-body font-semibold text-foreground font-sans leading-snug">Upload Paper Form</div>
+                        <div className="text-caption text-muted-foreground font-sans leading-snug">Scan or upload a filled form</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                     <Button
                       variant="ghost"
                       className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"

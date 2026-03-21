@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -43,6 +43,10 @@ export interface DynamicFormRendererProps {
   onSave?: (values: Record<string, unknown>) => Promise<void>;
   onSubmit?: (values: Record<string, unknown>) => Promise<void>;
   onChange?: (values: Record<string, unknown>) => void;
+  /** When true, hides the Save Draft / Submit buttons (parent renders them instead). */
+  hideActions?: boolean;
+  /** When set, resets the form to these values (merged with current). Used for scan-to-fill. */
+  resetValues?: Record<string, unknown> | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,6 +62,8 @@ export default function DynamicFormRenderer({
   onSave,
   onSubmit,
   onChange,
+  hideActions = false,
+  resetValues = null,
 }: DynamicFormRendererProps) {
 
   // Role filtering — members cannot see protected sections or fields
@@ -70,9 +76,18 @@ export default function DynamicFormRenderer({
     [fields, userRole]
   );
 
-  const { control, handleSubmit, watch, formState: { isSubmitting } } = useForm<Record<string, unknown>>({
+  const { control, handleSubmit, watch, reset, formState: { isSubmitting } } = useForm<Record<string, unknown>>({
     defaultValues: initialValues,
   });
+
+  // When parent provides scanned values, merge them into the current form state
+  const prevResetValues = useRef<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    if (resetValues && resetValues !== prevResetValues.current) {
+      prevResetValues.current = resetValues;
+      reset((current) => ({ ...current, ...resetValues }));
+    }
+  }, [resetValues, reset]);
 
   // Re-evaluate conditional logic whenever any value changes
   const values = watch();
@@ -211,8 +226,8 @@ export default function DynamicFormRenderer({
         })
       }
 
-      {/* Action buttons — fill mode only */}
-      {mode === 'fill' && (onSave || onSubmit) && (
+      {/* Action buttons — fill mode only, hidden when parent renders its own */}
+      {mode === 'fill' && !hideActions && (onSave || onSubmit) && (
         <div className="flex gap-3 pt-2 justify-end">
           {onSave && (
             <Button

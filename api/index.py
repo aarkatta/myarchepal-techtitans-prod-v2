@@ -15,8 +15,8 @@ from slowapi.errors import RateLimitExceeded
 # Load backend secrets from api/.env (local dev only — no-op on Vercel)
 # Must happen BEFORE importing routers so env vars are set when modules load.
 _api_dir = Path(__file__).parent
-load_dotenv(_api_dir / ".env")                   # api/.env  — backend secrets
-load_dotenv(_api_dir.parent / ".env")            # root .env — shared Firebase/Claude/OpenAI vars
+load_dotenv(_api_dir / ".env", override=True)                   # api/.env  — backend secrets
+load_dotenv(_api_dir.parent / ".env", override=True)            # root .env — shared Firebase/Claude/OpenAI vars
 
 # ---------------------------------------------------------------------------
 # Logging configuration — structured output for all "archepal.*" loggers
@@ -32,7 +32,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from api.middleware.logging_middleware import LoggingMiddleware
-from api.routers import pdf, export, notify
+from api.routers import pdf, export, notify, form_image, filled_form, sites
 from api.limiter import limiter
 from api.services.crashvault import log_warning
 
@@ -77,8 +77,11 @@ app.add_middleware(
 app.include_router(pdf.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(notify.router, prefix="/api")
+app.include_router(form_image.router, prefix="/api")
+app.include_router(filled_form.router, prefix="/api")
+app.include_router(sites.router, prefix="/api")
 
-logger.info("ArchePal API initialized — routers: pdf, export, notify")
+logger.info("ArchePal API initialized — routers: pdf, export, notify, form_image, filled_form, sites")
 
 
 @app.get("/api/health")
