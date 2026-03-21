@@ -17,9 +17,11 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Upload } from 'lucide-react';
 
 import { SiteTemplatesService } from '@/services/siteTemplates';
 import { useUser } from '@/hooks/use-user';
@@ -58,9 +60,13 @@ export function CreateSiteModal({ open, onOpenChange }: CreateSiteModalProps) {
   }, [open, organization?.id]);
 
   const handleContinue = () => {
-    const params = selectedTemplateId !== 'none' ? `?templateId=${selectedTemplateId}` : '';
     onOpenChange(false);
-    navigate(`/new-site${params}`);
+    if (selectedTemplateId === 'upload_filled_form') {
+      navigate('/upload-filled-form');
+    } else {
+      const params = selectedTemplateId !== 'none' ? `?templateId=${selectedTemplateId}` : '';
+      navigate(`/new-site${params}`);
+    }
   };
 
   return (
@@ -69,7 +75,7 @@ export function CreateSiteModal({ open, onOpenChange }: CreateSiteModalProps) {
         <DialogHeader>
           <DialogTitle>New Archaeological Site</DialogTitle>
           <DialogDescription>
-            Choose a form template to use for this site, or skip and add one later.
+            Choose a form template, or upload an already-filled paper form.
           </DialogDescription>
         </DialogHeader>
 
@@ -96,6 +102,13 @@ export function CreateSiteModal({ open, onOpenChange }: CreateSiteModalProps) {
                     {t.siteType ? ` — ${t.siteType}` : ''}
                   </SelectItem>
                 ))}
+                <SelectSeparator />
+                <SelectItem value="upload_filled_form">
+                  <span className="flex items-center gap-2">
+                    <Upload className="h-3.5 w-3.5 text-primary" />
+                    Upload Filled Form
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -119,7 +132,7 @@ export function CreateSiteModal({ open, onOpenChange }: CreateSiteModalProps) {
             Cancel
           </Button>
           <Button onClick={handleContinue} disabled={loading}>
-            Continue
+            {selectedTemplateId === 'upload_filled_form' ? 'Upload Form' : 'Continue'}
           </Button>
         </DialogFooter>
       </DialogContent>
