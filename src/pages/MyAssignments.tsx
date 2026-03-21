@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, ChevronRight, CheckCircle2, Clock, Send, Inbox } from 'lucide-react';
+import { ClipboardList, ChevronRight, CheckCircle2, Clock, Send, Inbox, Upload, AlertTriangle } from 'lucide-react';
 import { ResponsiveLayout } from '@/components/ResponsiveLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { AccountButton } from '@/components/AccountButton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SiteAssignmentsService } from '@/services/siteAssignments';
@@ -22,6 +23,7 @@ const STATUS_CONFIG: Record<
   in_progress: { label: 'In Progress', variant: 'default', icon: Clock },
   submitted: { label: 'Submitted', variant: 'outline', icon: Send },
   reviewed: { label: 'Reviewed', variant: 'secondary', icon: CheckCircle2 },
+  pending_template: { label: 'Awaiting Template', variant: 'outline', icon: AlertTriangle },
 };
 
 function StatusBadge({ status }: { status: SubmissionStatus | undefined }) {
@@ -41,14 +43,14 @@ const MyAssignments = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.uid || !organization?.id) return;
+    if (!user?.uid) return;
 
     const load = async () => {
       setLoading(true);
       try {
         const [assignments, templates] = await Promise.all([
-          SiteAssignmentsService.getMemberAssignments(user.uid, organization.id),
-          SiteTemplatesService.listTemplates(organization.id),
+          SiteAssignmentsService.getMemberAssignments(user.uid, organization?.id),
+          organization?.id ? SiteTemplatesService.listTemplates(organization.id) : Promise.resolve([]),
         ]);
         setSites(assignments);
         const nameMap: Record<string, string> = {};
@@ -62,7 +64,7 @@ const MyAssignments = () => {
     };
 
     load();
-  }, [user?.uid, organization?.id]);
+  }, [user?.uid, organization?.id]); // re-run if org loads after uid
 
   const counts = {
     pending: sites.filter(s => s.submissionStatus === 'assigned').length,
@@ -82,12 +84,23 @@ const MyAssignments = () => {
 
       <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Title */}
-        <div className="flex items-center gap-3">
-          <ClipboardList className="w-6 h-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">My Assignments</h1>
-            <p className="text-sm text-muted-foreground">Sites assigned to you for form completion</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <ClipboardList className="w-6 h-6 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">My Assignments</h1>
+              <p className="text-sm text-muted-foreground">Sites assigned to you for form completion</p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/upload-filled-form')}
+            className="shrink-0"
+          >
+            <Upload className="w-4 h-4 mr-1.5" />
+            Upload Paper Form
+          </Button>
         </div>
 
         {/* Summary counts */}

@@ -330,6 +330,32 @@ Phase 4 (form fill + offline) → Phase 6 (routing) → Phase 7 (validation)
 
 **Next tasks:** Phase 7 is complete. All planned dynamic-form feature phases are implemented.
 
+---
+
+## Upload Filled Forms Feature
+
+**Plan:** `docs/upload-filled-forms-plan.md` — read this before starting any task below.
+
+**Branch:** `fix/form-fill-permissions` (current) — create a new branch `feature/upload-filled-forms` when starting.
+
+**IMPORTANT:** After completing each task below, mark it `✅` here in CLAUDE.md and add a one-line note describing what was built (file paths + key decisions made). This keeps future sessions in sync without re-reading the full codebase.
+
+**Tasks:**
+
+- ✅ A.1 — Filled Form Parser Service (`api/services/filled_form_parser.py`) — Claude Opus 4.6 for PDF, Sonnet 4.6 for images; single call returns sections[], fields[], form_data (label→value), suggestedSiteName; includes truncation repair; `normalize_label()` exported for reuse
+- ✅ A.2 — Template Matcher Service (`api/services/template_matcher.py`) — loads published templates + fields/ subcollection from Firestore; normalized label overlap score; HIGH≥0.80 / POSSIBLE≥0.50 / NONE<0.50; returns field_id_map for remapping
+- ✅ A.3 — Parse Filled Form Endpoint (`api/routers/filled_form.py`) — `POST /api/parse-filled-form`; orchestrates A.1 + A.2; rate limit 5/min; template matching failures are non-fatal (returns "none" match); registered in `api/index.py`
+- ✅ B.1 — MEMBER Site Creation Endpoint (`api/routers/sites.py`) — `POST /api/sites/create-from-upload`; verifies Firebase ID token; looks up orgId from users collection; creates minimal Sites doc via Admin SDK (status: 'draft')
+- ✅ B.2 — Register New Routers (`api/index.py`) — added `filled_form` + `sites` routers
+- ✅ C.1 — Type Updates — added `'filled_form_upload'` to `TemplateSourceType`; added `'pending_template'` to `SubmissionStatus`
+- ✅ C.2 — Frontend Service (`src/services/filledFormUpload.ts`) — `parseFilledForm()`, `createSiteFromUpload()`, `remapFormData()` static methods; `_normalizeLabel()` matches Python normalization exactly
+- ✅ C.3 — Firestore/Storage Rules — no changes needed: submission update rule already uses `isDraft == true` (covers `pending_template`); storage rule already covers `orgs/{orgId}/sites/{siteId}/submissions/`
+- ✅ D.1 — Upload Filled Form Wizard (`src/pages/UploadFilledForm.tsx`) — 5-step wizard (upload→parsing→template→site→processing→review); handles high/possible/none confidence states; new template saved as `filled_form_upload` draft + admin notified fire-and-forget; site created via backend endpoint or picked from org; `FormFillContext.Provider` wraps review step; `pending_template` banner disables Submit until admin publishes
+- ✅ E.1 — Template List Pending Review tab (`src/pages/TemplateList.tsx`) — amber banner showing pending count; `filled_form_upload` + `draft` rows highlighted amber with "Needs Review" badge; `SOURCE_LABELS`/`SOURCE_VARIANTS` updated
+- ✅ E.2 — Dashboard stat card (`src/pages/OrgAdminDashboard.tsx`) — "Template Reviews" amber stat card (5th card); uses `SiteTemplatesService.listTemplates()` filtered for `filled_form_upload` + `draft`; navigates to `/templates`
+- ✅ E.3 — Admin Notification Email (`api/routers/notify.py`) — `POST /api/notify-admin-template-review`; looks up uploader displayName + all ORG_ADMINs in org; sends branded HTML+text email to each; graceful SMTP skip; returns `{"ok": true}`
+- ✅ F.1 — Routes + Nav (`src/App.tsx`, `src/components/BottomNav.tsx`, `src/pages/MyAssignments.tsx`) — `/upload-filled-form` route under `<ProtectedRoute>`; BottomNav "Upload Paper Form" in MEMBER + admin sections; MyAssignments header CTA button; `pending_template` added to `STATUS_CONFIG` with "Awaiting Template" label
+
 **Recent cleanup (post-Phase 7):**
 - ✅ Switched PDF parsing to **Claude Opus 4.6 via Anthropic API** — removed LLMWhisperer + Azure AI Foundry pipeline
 - ✅ Removed unused env vars `AZURE_FOUNDY_PROJECT_ENDPOINT`, `AZURE_PROJECT_API_KEY` from `.env`

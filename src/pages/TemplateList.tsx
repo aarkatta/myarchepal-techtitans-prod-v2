@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import {
-  Plus, FileText, Edit, Trash2, Copy, Globe, EyeOff, MoreHorizontal, Lock,
+  Plus, FileText, Edit, Trash2, Copy, Globe, EyeOff, MoreHorizontal, Lock, AlertTriangle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -31,15 +31,17 @@ import { ResponsiveLayout } from '@/components/ResponsiveLayout';
 // ---------------------------------------------------------------------------
 
 const SOURCE_LABELS: Record<string, string> = {
-  pdf_digitized: 'PDF Import',
-  customized:    'Customized',
-  blank_canvas:  'Blank Canvas',
+  pdf_digitized:      'PDF Import',
+  customized:         'Customized',
+  blank_canvas:       'Blank Canvas',
+  filled_form_upload: 'Form Upload',
 };
 
 const SOURCE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'> = {
-  pdf_digitized: 'outline',
-  customized:    'secondary',
-  blank_canvas:  'secondary',
+  pdf_digitized:      'outline',
+  customized:         'secondary',
+  blank_canvas:       'secondary',
+  filled_form_upload: 'outline',
 };
 
 
@@ -214,6 +216,28 @@ export default function TemplateList() {
         </div>
       )}
 
+      {/* Needs Review banner — shown when auto-generated templates await admin approval */}
+      {!loading && (() => {
+        const pendingCount = templates.filter(
+          t => t.sourceType === 'filled_form_upload' && t.status === 'draft',
+        ).length;
+        if (pendingCount === 0) return null;
+        return (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                {pendingCount} auto-generated template{pendingCount !== 1 ? 's' : ''} need{pendingCount === 1 ? 's' : ''} review
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                A field consultant uploaded a filled form. Review each draft template below and
+                publish it to unlock their submission.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Template table */}
       {!loading && (templates.length > 0 || systemTemplates.length > 0) && (
         <div className="border rounded-xl overflow-hidden">
@@ -287,10 +311,15 @@ export default function TemplateList() {
           {/* Org templates */}
           {templates.map(t => {
             const busy = actionInProgress === t.id;
+            const needsReview = t.sourceType === 'filled_form_upload' && t.status === 'draft';
             return (
               <div
                 key={t.id}
-                className="grid grid-cols-[1fr_120px_100px_90px_80px_44px] gap-3 items-center px-4 py-3 border-b last:border-0 hover:bg-muted/30 transition-colors"
+                className={`grid grid-cols-[1fr_120px_100px_90px_80px_44px] gap-3 items-center px-4 py-3 border-b last:border-0 transition-colors ${
+                  needsReview
+                    ? 'bg-amber-50/40 hover:bg-amber-50/60 dark:bg-amber-950/10'
+                    : 'hover:bg-muted/30'
+                }`}
               >
                 {/* Name */}
                 <div className="min-w-0">
@@ -312,12 +341,18 @@ export default function TemplateList() {
                 </Badge>
 
                 {/* Status */}
-                <Badge
-                  variant={t.status === 'published' ? 'default' : 'secondary'}
-                  className="text-xs w-fit"
-                >
-                  {t.status === 'published' ? 'Published' : 'Draft'}
-                </Badge>
+                {needsReview ? (
+                  <Badge className="text-xs w-fit bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300">
+                    Needs Review
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant={t.status === 'published' ? 'default' : 'secondary'}
+                    className="text-xs w-fit"
+                  >
+                    {t.status === 'published' ? 'Published' : 'Draft'}
+                  </Badge>
+                )}
 
                 {/* Updated */}
                 <span className="text-xs text-muted-foreground">{formatUpdated(t.updatedAt)}</span>

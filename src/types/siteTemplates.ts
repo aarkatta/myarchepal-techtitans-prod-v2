@@ -40,7 +40,7 @@ export interface TemplateSection {
   isProtected: boolean;        // e.g. "Office of State Archaeology Use"
 }
 
-export type TemplateSourceType = 'pdf_digitized' | 'customized' | 'blank_canvas';
+export type TemplateSourceType = 'pdf_digitized' | 'customized' | 'blank_canvas' | 'filled_form_upload';
 export type TemplateStatus = 'draft' | 'published';
 
 export interface SiteTemplate {

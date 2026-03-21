@@ -11,9 +11,10 @@ Body: { siteId, consultantId, consultantEmail }
 import logging
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from api.limiter import limiter
 from api.services.crashvault import capture_exception, log_info, log_warning
 
 logger = logging.getLogger("archepal.routers.notify")
@@ -28,7 +29,8 @@ class NotifyRequest(BaseModel):
 
 
 @router.post("/notify-consultant")
-async def notify_consultant(body: NotifyRequest):
+@limiter.limit("10/minute")
+async def notify_consultant(request: Request, body: NotifyRequest):
     """
     Send an email notification to the assigned consultant.
     Returns { ok: true } regardless — the frontend is fire-and-forget.
@@ -117,6 +119,125 @@ async def notify_consultant(body: NotifyRequest):
     except Exception as e:
         logger.error("Email send failed — to=%s: %s", body.consultantEmail, e, exc_info=True)
         capture_exception(e, tags=["notify", "email"], context={"siteId": body.siteId, "to": body.consultantEmail}, source="api.routers.notify")
+
+    return {"ok": True}
+
+
+class NotifyAdminTemplateReviewRequest(BaseModel):
+    template_id: str
+    template_name: str
+    uploaded_by_uid: str
+    site_name: str
+    org_id: str
+
+
+@router.post("/notify-admin-template-review")
+@limiter.limit("20/minute")
+async def notify_admin_template_review(
+    request: Request, body: NotifyAdminTemplateReviewRequest
+):
+    """
+    Send a template-review notification to all ORG_ADMINs in the organization.
+    Called fire-and-forget from UploadFilledForm.tsx when a new template is auto-generated.
+    Returns { ok: true } regardless.
+    """
+    logger.info(
+        "notify-admin-template-review called — template=%s org=%s uploaded_by=%s",
+        body.template_id, body.org_id, body.uploaded_by_uid,
+    )
+
+    admin_emails: list[str] = []
+    uploader_name = "A field consultant"
+
+    try:
+        from api.services.fb_admin import get_db
+
+        db = get_db()
+
+        # Look up uploader display name
+        uploader_doc = db.collection("users").document(body.uploaded_by_uid).get()
+        if uploader_doc.exists:
+            uploader_name = uploader_doc.to_dict().get("displayName", uploader_name)
+
+        # Find all ORG_ADMINs in the org
+        admins_snap = (
+            db.collection("users")
+            .where("organizationId", "==", body.org_id)
+            .where("role", "==", "ORG_ADMIN")
+            .stream()
+        )
+        for admin_doc in admins_snap:
+            email = admin_doc.to_dict().get("email", "")
+            if email:
+                admin_emails.append(email)
+    except Exception as e:
+        logger.warning("notify-admin-template-review: Firestore lookup failed — %s", e)
+
+    if not admin_emails:
+        logger.info("notify-admin-template-review: no admin emails found for org=%s", body.org_id)
+        return {"ok": True}
+
+    app_url = os.environ.get("APP_URL", "http://localhost:8080")
+    review_link = f"{app_url}/#/templates/{body.template_id}/edit"
+    subject = f"New form template needs review — {body.template_name}"
+
+    body_text = (
+        f"Hi,\n\n"
+        f"{uploader_name} uploaded a filled paper form for site '{body.site_name}'.\n"
+        f"A draft template was automatically generated from the form and needs your review.\n\n"
+        f"Template: {body.template_name}\n"
+        f"Review it here:\n  {review_link}\n\n"
+        f"Once you publish the template, the consultant can submit their form.\n\n"
+        f"— ArchePal\n"
+        f"NC Archaeology Site Management Platform"
+    )
+
+    body_html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <div style="background:#1e3a5f;padding:20px 24px;">
+        <h2 style="color:#ffffff;margin:0;">ArchePal</h2>
+        <p style="color:#a8c4e0;margin:4px 0 0;">NC Archaeology Site Management</p>
+      </div>
+      <div style="padding:24px;">
+        <p>Hi,</p>
+        <p>
+          <strong>{uploader_name}</strong> uploaded a filled paper form for site
+          <strong>{body.site_name}</strong>. A draft template was automatically generated
+          and needs your review before the consultant can submit.
+        </p>
+        <p style="font-size:18px;font-weight:bold;color:#1e3a5f;">{body.template_name}</p>
+        <p style="margin-top:24px;">
+          <a href="{review_link}"
+             style="display:inline-block;padding:12px 24px;background:#1e3a5f;
+                    color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">
+            Review Template
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px;margin-top:16px;">
+          Review the generated fields, make corrections, then publish to unlock the submission.
+        </p>
+      </div>
+      <div style="background:#f5f5f5;padding:12px 24px;text-align:center;">
+        <p style="color:#999;font-size:11px;margin:0;">
+          Sent by ArchePal · NC Archaeology Site Management Platform
+        </p>
+      </div>
+    </div>
+    """
+
+    for email in admin_emails:
+        try:
+            await _send_email(
+                to=email,
+                subject=subject,
+                body_text=body_text,
+                body_html=body_html,
+            )
+            logger.info("notify-admin-template-review: email sent to %s", email)
+        except Exception as e:
+            logger.error(
+                "notify-admin-template-review: email to %s failed — %s", email, e, exc_info=True
+            )
 
     return {"ok": True}
 

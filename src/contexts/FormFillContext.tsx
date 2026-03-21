@@ -1,9 +1,14 @@
 import { createContext, useContext } from 'react';
+import type { MediaAttachment } from '@/types/siteSubmissions';
 
 export interface FormFillContextValue {
   siteId: string;
   submissionId: string;
   orgId: string;
+  /** Full flat list of all media attachments for the current submission. */
+  mediaAttachments: MediaAttachment[];
+  /** Replace the full mediaAttachments list. Persists to Firestore. */
+  onMediaChange: (updated: MediaAttachment[]) => void;
 }
 
 export const FormFillContext = createContext<FormFillContextValue | null>(null);
