@@ -26,7 +26,6 @@ from api.limiter import limiter
 from api.services.filled_form_parser import (
     PDF_MEDIA_TYPE,
     ALLOWED_IMAGE_TYPES,
-    normalize_label,
     parse_filled_form_with_claude,
 )
 from api.services.template_matcher import match_template
