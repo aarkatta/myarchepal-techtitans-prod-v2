@@ -83,22 +83,22 @@ service cloud.firestore {
                           .hasOnly(['linkedTemplateId', 'assignedConsultantId', 'assignedConsultantEmail', 'submissionStatus', 'updatedAt']);
     }
 
-    // Articles Collection - Public read, archaeologist write
+    // Articles Collection - Public read, archaeologist/member/admin write
     match /Articles/{articleId} {
       allow read: if true;
-      allow create, update, delete: if isArchaeologist();
+      allow create, update, delete: if isArchaeologist() || isAnyAdmin() || isOrgMember();
     }
 
-    // Events Collection - Public read, archaeologist write
+    // Events Collection - Public read, archaeologist/member/admin write
     match /events/{eventId} {
       allow read: if true;
-      allow create, update, delete: if isArchaeologist();
+      allow create, update, delete: if isArchaeologist() || isAnyAdmin() || isOrgMember();
     }
 
-    // Artifacts Collection - Public read, archaeologist write
+    // Artifacts Collection - Public read, archaeologist/member/admin write
     match /Artifacts/{artifactId} {
       allow read: if true;
-      allow create, update, delete: if isArchaeologist();
+      allow create, update, delete: if isArchaeologist() || isAnyAdmin() || isOrgMember();
       // PURCHASE RULE: Allow anyone to reduce quantity for purchases
       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'updatedAt']) &&
                       resource.data.forSale == true &&

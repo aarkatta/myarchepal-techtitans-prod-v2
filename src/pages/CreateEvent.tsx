@@ -20,8 +20,9 @@ const CreateEvent = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { organization } = useUser();
-  const { isArchaeologist, loading: archaeologistLoading, canCreate } = useArchaeologist();
+  const { organization, isMember, isAdmin } = useUser();
+  const { isArchaeologist, loading: archaeologistLoading, canCreate: archaeologistCanCreate } = useArchaeologist();
+  const canCreate = archaeologistCanCreate || isMember || isAdmin;
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -127,7 +128,7 @@ const CreateEvent = () => {
               <div className="p-6 text-center">
                 <p className="text-muted-foreground mb-4">
                   {!user ? 'Please sign in as an archaeologist to create events.' :
-                   !isArchaeologist ? 'Only verified archaeologists can create events.' :
+                   !isArchaeologist && !isMember && !isAdmin ? 'Only verified archaeologists can create events.' :
                    'Loading...'}
                 </p>
                 {!user && (

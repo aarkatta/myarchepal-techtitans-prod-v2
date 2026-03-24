@@ -31,8 +31,9 @@ const CreateArticle = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { organization } = useUser();
-  const { isArchaeologist, canCreate } = useArchaeologist();
+  const { organization, isMember, isAdmin } = useUser();
+  const { isArchaeologist, canCreate: archaeologistCanCreate } = useArchaeologist();
+  const canCreate = archaeologistCanCreate || isMember || isAdmin;
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -143,10 +144,10 @@ const CreateArticle = () => {
       return;
     }
 
-    if (!isArchaeologist) {
+    if (!isArchaeologist && !isMember && !isAdmin) {
       toast({
         title: "Permission Error",
-        description: "Only verified archaeologists can create articles",
+        description: "Only verified archaeologists or org members can create articles",
         variant: "destructive"
       });
       return;
@@ -231,7 +232,7 @@ const CreateArticle = () => {
                 <div className="text-center">
                   <p className="text-muted-foreground mb-4">
                     {!user ? 'Please sign in as an archaeologist to create articles.' :
-                     !isArchaeologist ? 'Only verified archaeologists can create articles.' :
+                     !isArchaeologist && !isMember && !isAdmin ? 'Only verified archaeologists can create articles.' :
                      'Loading...'}
                   </p>
                   {!user && (

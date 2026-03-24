@@ -43,8 +43,9 @@ const CreateArtifact = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { organization } = useUser();
-  const { isArchaeologist, loading: archaeologistLoading, canCreate } = useArchaeologist();
+  const { organization, isMember, isAdmin } = useUser();
+  const { isArchaeologist, loading: archaeologistLoading, canCreate: archaeologistCanCreate } = useArchaeologist();
+  const canCreate = archaeologistCanCreate || isMember || isAdmin;
   const { isOnline, pendingCount } = useOfflineSync();
   const { hideKeyboard } = useKeyboard();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -203,10 +204,10 @@ const CreateArtifact = () => {
       }
     };
 
-    if (user && isArchaeologist && organization) {
+    if (user && (isArchaeologist || isMember || isAdmin) && organization) {
       fetchUserSites();
     }
-  }, [user, isArchaeologist, organization, isProOrg, toast]);
+  }, [user, isArchaeologist, isMember, isAdmin, organization, isProOrg, toast]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -690,8 +691,7 @@ const CreateArtifact = () => {
             <Card>
               <div className="p-6 text-center">
                 <p className="text-muted-foreground mb-4">
-                  {!user ? 'Please sign in as an archaeologist to create artifacts.' :
-                   !isArchaeologist ? 'Only verified archaeologists can create artifacts.' :
+                  {!user ? 'Please sign in to create artifacts.' :
                    'Loading...'}
                 </p>
                 {!user && (
