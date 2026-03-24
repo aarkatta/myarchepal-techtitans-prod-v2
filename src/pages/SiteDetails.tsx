@@ -278,7 +278,11 @@ const SiteDetails = () => {
   // 3. User is a site admin
   const isCreator = user && site && site.createdBy === user.uid;
   const isActiveProject = site && site.status === "active";
-  const canEdit = user && isArchaeologist && site && (isCreator || isActiveProject || isSiteAdmin);
+  const canEdit = user && site && (
+    (isArchaeologist && (isCreator || isActiveProject || isSiteAdmin)) ||
+    (isMember && site.organizationId === organization?.id) ||
+    isOrgAdmin
+  );
 
   // Can change visibility if: user is the creator and belongs to a Pro/Enterprise org
   const canChangeVisibility = isCreator && isProOrg;

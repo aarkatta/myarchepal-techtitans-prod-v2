@@ -32,7 +32,7 @@ export default function NewSite() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { organization, isOrgAdmin, isSuperAdmin } = useUser();
+  const { organization, isOrgAdmin, isSuperAdmin, isMember } = useUser();
   const isAdmin = isOrgAdmin || isSuperAdmin;
 
   const [saving, setSaving] = useState(false);
@@ -195,7 +195,7 @@ export default function NewSite() {
   };
 
   // ---- Permission guard -----------------------------------------------------
-  if (!isAdmin) {
+  if (!isAdmin && !isMember) {
     return (
       <ResponsiveLayout>
         <header className="bg-card/95 backdrop-blur-lg px-4 py-4 border-b border-border sticky top-0 z-40">
@@ -234,7 +234,7 @@ export default function NewSite() {
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
 
-        <h1 className="text-2xl font-bold">New Archaeological Site</h1>
+        <h1 className="text-2xl font-bold">New Archeological Site</h1>
 
         {/* ------------------------------------------------------------------ */}
         {/* Site basic info + template selection in one card                    */}

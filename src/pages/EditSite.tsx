@@ -34,7 +34,7 @@ const EditSite = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { organization, isOrgAdmin, isSuperAdmin } = useUser();
+  const { organization, isOrgAdmin, isSuperAdmin, isMember, loading: userLoading } = useUser();
   const { isArchaeologist, loading: archaeologistLoading } = useArchaeologist();
   const isAdmin = isOrgAdmin || isSuperAdmin;
 
@@ -138,14 +138,16 @@ const EditSite = () => {
   // ---- Permission check --------------------------------------------------
   const isCreator = user && site && site.createdBy === user.uid;
   const isActiveProject = site && site.status === "active";
-  const canEdit = isAdmin || (user && isArchaeologist && site && (isCreator || isActiveProject));
+  const canEdit = isAdmin ||
+    (isMember && site?.organizationId === organization?.id) ||
+    (user && isArchaeologist && site && (isCreator || isActiveProject));
 
   useEffect(() => {
-    if (!siteLoading && !archaeologistLoading && site && !canEdit) {
+    if (!siteLoading && !archaeologistLoading && !userLoading && site && !canEdit) {
       toast.error("You don't have permission to edit this site.");
       navigate(`/site/${id}`);
     }
-  }, [canEdit, siteLoading, archaeologistLoading, site, navigate, id]);
+  }, [canEdit, siteLoading, archaeologistLoading, userLoading, site, navigate, id]);
 
   // ---- Image handling ----------------------------------------------------
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

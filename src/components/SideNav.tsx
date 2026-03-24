@@ -169,8 +169,8 @@ export const SideNav = () => {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Create Collapsible - Only for Archaeologists */}
-        {isAuthenticated && isArchaeologist && (
+        {/* Create Collapsible - For Archaeologists, Org Members, and Admins */}
+        {isAuthenticated && (isArchaeologist || isMember || isAdmin) && (
           <Collapsible open={isCreateOpen} onOpenChange={setIsCreateOpen} className="mb-1">
             <CollapsibleTrigger asChild>
               <button
@@ -206,8 +206,8 @@ export const SideNav = () => {
           </Collapsible>
         )}
 
-        {/* Admin Collapsible - Only for Admin Users */}
-        {isAuthenticated && isAdmin && (
+        {/* Admin/Manage Collapsible - For Admins and Org Members */}
+        {isAuthenticated && (isAdmin || isMember) && (
           <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="mb-1">
             <CollapsibleTrigger asChild>
               <button
@@ -219,24 +219,26 @@ export const SideNav = () => {
               >
                 <span className="flex items-center gap-3">
                   <Shield className={`w-5 h-5 ${isAdminActive ? "text-primary" : ""}`} />
-                  Admin
+                  {isAdmin ? 'Admin' : 'Manage'}
                 </span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1 space-y-0.5">
-              {/* Org Dashboard - for all admins */}
-              <button
-                onClick={() => navigate('/org-dashboard')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                  isActive('/org-dashboard')
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <Building2 className="w-4 h-4" />
-                Organization
-              </button>
+              {/* Org Dashboard - for admins only */}
+              {isAdmin && (
+                <button
+                  onClick={() => navigate('/org-dashboard')}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
+                    isActive('/org-dashboard')
+                      ? "text-primary bg-primary/5"
+                      : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Organization
+                </button>
+              )}
               {/* Form Templates */}
               <button
                 onClick={() => navigate('/templates')}

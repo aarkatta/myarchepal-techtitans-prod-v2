@@ -287,7 +287,7 @@ const UploadFilledForm = () => {
             <div>
               <h2 className="text-lg font-semibold">Upload a Filled Form</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Upload a PDF or photo of a paper form you've already filled out. Claude will
+                Upload a PDF or photo of a paper form you've already filled out. ArchePal will
                 extract the values and create a digital record.
               </p>
             </div>

@@ -81,7 +81,10 @@ const FormFill = () => {
       try {
         const siteData = await SitesService.getSiteById(siteId);
         if (!siteData) throw new Error('Site not found.');
-        if (!siteData.linkedTemplateId) throw new Error('This site has no linked form template.');
+        if (!siteData.linkedTemplateId) {
+          navigate(`/edit-site/${siteId}`, { replace: true });
+          return;
+        }
         setSite(siteData);
 
         const [templateFields, templateSections] = await Promise.all([

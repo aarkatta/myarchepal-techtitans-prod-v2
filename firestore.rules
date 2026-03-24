@@ -38,6 +38,11 @@ service cloud.firestore {
       return isUser() && (getUserData().role == 'SUPER_ADMIN' || getUserData().role == 'ORG_ADMIN');
     }
 
+    // Check if user is an org member (MEMBER role)
+    function isOrgMember() {
+      return isUser() && getUserData().role == 'MEMBER';
+    }
+
     // Check if user belongs to a specific organization
     function belongsToOrg(orgId) {
       return isUser() && getUserData().organizationId == orgId;
@@ -52,10 +57,10 @@ service cloud.firestore {
     // CONTENT COLLECTIONS (Public read)
     // ========================================================================
 
-    // Sites Collection - Public read, archaeologist write
+    // Sites Collection - Public read, archaeologist/member/admin write
     match /Sites/{siteId} {
       allow read: if true;
-      allow create, update, delete: if isArchaeologist() || isAnyAdmin();
+      allow create, update, delete: if isArchaeologist() || isAnyAdmin() || isOrgMember();
       // Admins can update site assignment fields (linkedTemplateId, assignedConsultantId, submissionStatus, etc.)
       allow update: if request.auth != null && isAnyAdmin();
       // Assigned consultant (MEMBER) can update submissionStatus only
@@ -293,20 +298,22 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // SITE TEMPLATES — ORG_ADMIN manages, MEMBER reads published only
+    // SITE TEMPLATES — ORG_ADMIN and MEMBER manage; all org members read all
     // ========================================================================
 
     match /siteTemplates/{templateId} {
       // System default templates (orgId == 'SYSTEM') are readable by any authenticated user
-      // ORG_ADMIN (or SUPER_ADMIN) in the same org can read all; MEMBER reads published only
+      // Any org member (admin or member) in the same org can read all templates
       allow read: if (request.auth != null && resource.data.orgId == 'SYSTEM')
-                   || (canAccessOrg(resource.data.orgId)
-                       && (isAnyAdmin() || resource.data.status == 'published'));
-      // Only ORG_ADMIN or SUPER_ADMIN can create/edit/delete (system templates are blocked by orgId check)
-      allow create: if request.auth != null && isAnyAdmin()
+                   || (canAccessOrg(resource.data.orgId) && isAnyAdmin())
+                   || (isOrgMember() && getUserData().organizationId == resource.data.orgId);
+      // ORG_ADMIN, SUPER_ADMIN, or MEMBER in same org can create (system templates blocked by orgId check)
+      allow create: if request.auth != null
+                    && (isAnyAdmin() || isOrgMember())
                     && request.resource.data.orgId == getUserData().organizationId;
       // System templates (orgId == 'SYSTEM') cannot be updated or deleted by any frontend user
-      allow update, delete: if request.auth != null && isAnyAdmin()
+      allow update, delete: if request.auth != null
+                    && (isAnyAdmin() || isOrgMember())
                     && resource.data.orgId == getUserData().organizationId
                     && resource.data.orgId != 'SYSTEM';
 
@@ -314,17 +321,21 @@ service cloud.firestore {
         allow read: if request.auth != null
                      && (get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId == 'SYSTEM'
                          || canAccessOrg(get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId)
-                         || (isUser() && getUserData().role == 'MEMBER'
+                         || (isOrgMember()
                              && getUserData().organizationId == get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId));
-        allow write: if request.auth != null && isAnyAdmin();
+        allow write: if request.auth != null
+                      && (isAnyAdmin() || isOrgMember())
+                      && getUserData().organizationId == get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId;
       }
       match /sections/{sectionId} {
         allow read: if request.auth != null
                      && (get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId == 'SYSTEM'
                          || canAccessOrg(get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId)
-                         || (isUser() && getUserData().role == 'MEMBER'
+                         || (isOrgMember()
                              && getUserData().organizationId == get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId));
-        allow write: if request.auth != null && isAnyAdmin();
+        allow write: if request.auth != null
+                      && (isAnyAdmin() || isOrgMember())
+                      && getUserData().organizationId == get(/databases/$(database)/documents/siteTemplates/$(templateId)).data.orgId;
       }
     }
 

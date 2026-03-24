@@ -203,26 +203,26 @@ const App = () => {
               </AdminRoute>
             } />
 
-            {/* Template management routes */}
+            {/* Template management routes — accessible to all org members */}
             <Route path="/templates" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <TemplateList />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
             <Route path="/templates/new/pdf" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <TemplateImportPDF />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
             <Route path="/templates/:templateId/edit" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <TemplateEditor />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
             <Route path="/templates/new/blank" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <TemplateBuilder />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
 
             {/* Upload filled form route */}
@@ -249,16 +249,16 @@ const App = () => {
               </ProtectedRoute>
             } />
 
-            {/* Phase 3 — Site assignment routes */}
+            {/* Phase 3 — Site assignment routes — accessible to all org members */}
             <Route path="/admin-assignments" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <AdminSiteAssignments />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
             <Route path="/assign-form/:siteId" element={
-              <AdminRoute>
+              <ProtectedRoute>
                 <AssignForm />
-              </AdminRoute>
+              </ProtectedRoute>
             } />
 
             {/* Invitation acceptance route (public but requires valid token) */}
