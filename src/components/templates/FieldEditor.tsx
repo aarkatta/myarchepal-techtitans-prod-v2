@@ -225,7 +225,7 @@ export default function FieldEditor({
           <Separator />
           <OptionsEditor
             key={field.id}
-            options={field.options ?? []}
+            options={Array.isArray(field.options) ? field.options : []}
             onSave={saveOptions}
           />
         </>

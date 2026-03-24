@@ -5,7 +5,7 @@ import type { FieldComponentProps } from './_types';
 
 /** Handles fieldType: radio */
 export default function RadioField({ field, control, mode }: FieldComponentProps) {
-  const options = field.options ?? [];
+  const options = Array.isArray(field.options) ? field.options : [];
 
   return (
     <Controller

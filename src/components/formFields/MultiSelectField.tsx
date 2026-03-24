@@ -41,7 +41,7 @@ export default function MultiSelectField({ field, control, mode }: FieldComponen
   }
 
   // Multi-option checkboxes (multiselect, or checkbox with an options list)
-  const options = field.options ?? [];
+  const options = Array.isArray(field.options) ? field.options : [];
 
   return (
     <Controller

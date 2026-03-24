@@ -11,7 +11,7 @@ import type { FieldComponentProps } from './_types';
 
 /** Handles fieldType: select */
 export default function SelectField({ field, control, mode }: FieldComponentProps) {
-  const options = field.options ?? [];
+  const options = Array.isArray(field.options) ? field.options : [];
 
   return (
     <Controller
