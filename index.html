@@ -46,6 +46,14 @@
   </head>
 
   <body>
+    <script>
+      try {
+        var t = localStorage.getItem('archepal-theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch {}
+    </script>
     <div id="root"></div>
     <!-- Apply dark mode before React renders to prevent flash -->
     <script>

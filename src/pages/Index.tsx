@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { QuickActions } from "@/components/QuickActions";
 import { ActiveProject } from "@/components/ActiveProject";
 import { RecentFinds } from "@/components/RecentFinds";
 import { SiteConditions } from "@/components/SiteConditions";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
+import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { ArrowRight, MapPin, BookOpen, Calendar } from "lucide-react";
+import { SitesService } from "@/services/sites";
+import type { Site } from "@/services/sites";
+import { ArticlesService } from "@/services/articles";
+import type { Article } from "@/services/articles";
+import { EventsService } from "@/services/events";
+import type { Event as ArcheEvent } from "@/services/events";
+import { Timestamp } from "firebase/firestore";
 
 // Default coordinates for Raleigh, North Carolina
 const DEFAULT_LOCATION = {
@@ -13,10 +23,42 @@ const DEFAULT_LOCATION = {
   longitude: -78.6382
 };
 
+const formatEventDate = (date: Timestamp | Date | undefined): string => {
+  if (!date) return "";
+  const d = date instanceof Timestamp ? date.toDate() : date;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 const Index = () => {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(true);
+  const [featuredSite, setFeaturedSite] = useState<Site | null>(null);
+  const [latestArticle, setLatestArticle] = useState<Article | null>(null);
+  const [upcomingEvent, setUpcomingEvent] = useState<ArcheEvent | null>(null);
+
+  useEffect(() => {
+    SitesService.getRecentSites(1).then(sites => setFeaturedSite(sites[0] ?? null)).catch(() => {});
+    ArticlesService.getAllArticles().then(articles => {
+      const published = articles.filter(a => a.published);
+      setLatestArticle(published[0] ?? null);
+    }).catch(() => {});
+    EventsService.getAllEvents().then(events => {
+      const now = new Date();
+      const upcoming = events
+        .filter(e => {
+          const d = e.date instanceof Timestamp ? e.date.toDate() : new Date(e.date as any);
+          return d >= now;
+        })
+        .sort((a, b) => {
+          const da = a.date instanceof Timestamp ? a.date.toDate() : new Date(a.date as any);
+          const db_ = b.date instanceof Timestamp ? b.date.toDate() : new Date(b.date as any);
+          return da.getTime() - db_.getTime();
+        });
+      setUpcomingEvent(upcoming[0] ?? null);
+    }).catch(() => {});
+  }, []);
 
   // Get user's location on component mount
   useEffect(() => {
@@ -57,6 +99,91 @@ const Index = () => {
   return (
     <ResponsiveLayout>
       <AppHeader />
+
+      {/* Feature Cards */}
+      <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          {/* Featured Content */}
+          <Card
+            className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+            onClick={() => navigate("/site-lists")}
+          >
+            <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 overflow-hidden">
+              {featuredSite?.images?.[0] ? (
+                <img src={featuredSite.images[0]} alt={featuredSite.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <MapPin className="w-10 h-10 text-primary/40" />
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Featured Content</p>
+              <h3 className="font-semibold text-foreground text-sm leading-snug mb-1 line-clamp-2">
+                {featuredSite?.name ?? "Explore Archaeological Sites"}
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {featuredSite?.description ?? "Browse NC archaeological sites and discoveries."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary font-medium">
+                View Sites <ArrowRight className="w-3 h-3" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Latest Articles */}
+          <Card
+            className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+            onClick={() => navigate("/articles")}
+          >
+            <div className="aspect-video bg-gradient-to-br from-amber-500/20 to-amber-500/5 overflow-hidden">
+              {latestArticle?.image ? (
+                <img src={latestArticle.image} alt={latestArticle.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl">
+                  {latestArticle?.imageEmoji ?? <BookOpen className="w-10 h-10 text-amber-500/40" />}
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">Latest Articles</p>
+              <h3 className="font-semibold text-foreground text-sm leading-snug mb-1 line-clamp-2">
+                {latestArticle?.title ?? "Research & Discoveries"}
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {latestArticle?.excerpt ?? "Read the latest archaeological research and field notes."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-amber-600 font-medium">
+                Read Articles <ArrowRight className="w-3 h-3" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card
+            className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+            onClick={() => navigate("/events")}
+          >
+            <div className="aspect-video bg-gradient-to-br from-green-500/20 to-green-500/5 overflow-hidden flex items-center justify-center">
+              <Calendar className="w-10 h-10 text-green-500/40" />
+            </div>
+            <div className="p-4">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Upcoming Events</p>
+              <h3 className="font-semibold text-foreground text-sm leading-snug mb-1 line-clamp-2">
+                {upcomingEvent?.title ?? "Community Events"}
+              </h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {upcomingEvent
+                  ? `${formatEventDate(upcomingEvent.date)} · ${upcomingEvent.locationName}`
+                  : "Join upcoming archaeology events and workshops."}
+              </p>
+              <div className="mt-3 flex items-center gap-1 text-xs text-green-600 font-medium">
+                View Events <ArrowRight className="w-3 h-3" />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
 
       <main className="animate-fade-in">
         {/* Two-column layout on desktop */}

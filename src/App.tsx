@@ -76,7 +76,11 @@ import MyAssignments from "./pages/MyAssignments";
 import FormFill from "./pages/FormFill";
 import SubmissionDetail from "./pages/SubmissionDetail";
 import UploadFilledForm from "./pages/UploadFilledForm";
+import AdminUsers from "./pages/AdminUsers";
+import Help from "./pages/Help";
+import Deactivate from "./pages/Deactivate";
 import { HelpButton } from "@/components/HelpButton";
+import { ThemeProvider } from "@/hooks/use-theme";
 
 // Create React Query client instance
 const queryClient = new QueryClient();
@@ -86,7 +90,8 @@ const App = () => {
   useCapacitorInit();
 
   return (
-  // React Query provider for data fetching
+  <ThemeProvider>
+  {/* React Query provider for data fetching */}
   <QueryClientProvider client={queryClient}>
     {/* Tooltip provider for UI components */}
     <TooltipProvider>
@@ -264,6 +269,18 @@ const App = () => {
             {/* Invitation acceptance route (public but requires valid token) */}
             <Route path="/accept-invite" element={<AcceptInvite />} />
 
+            <Route path="/admin-users" element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            } />
+            <Route path="/help" element={<Help />} />
+            <Route path="/deactivate" element={
+              <ProtectedRoute>
+                <Deactivate />
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route for 404 pages */}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
@@ -273,6 +290,7 @@ const App = () => {
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
   );
 };
 

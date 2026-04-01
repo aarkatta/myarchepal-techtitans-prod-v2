@@ -1,4 +1,5 @@
-import { Home, Compass, Plus, Heart, Newspaper, Package, PlusSquare, Calendar, Store, Menu, Users, User, Settings, Lock, Info, Mail, LogOut, ChevronRight, BookOpen, MessageSquare, Star, Building2, Shield, ClipboardList, Upload, Moon, Sun } from "lucide-react";
+import { Home, Compass, Plus, Heart, Newspaper, Package, PlusSquare, Calendar, Store, Box, Menu, Users, User, Settings, Lock, Info, Mail, LogOut, ChevronRight, BookOpen, MessageSquare, Star, Building2, Shield, ClipboardList, Upload, Moon, Sun, Trash2 } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useState } from "react";
 import { CreateSiteModal } from "@/components/CreateSiteModal";
@@ -21,8 +22,7 @@ const exploreItems = [
   { icon: Package, label: "Artifacts", description: "Explore discovered artifacts", path: "/artifacts" },
   { icon: Newspaper, label: "Articles", description: "Read research articles", path: "/articles" },
   { icon: Calendar, label: "Events", description: "Upcoming events", path: "/events" },
-  { icon: Users, label: "Collaborate", description: "Work with the team", path: "/team" },
-  { icon: MessageSquare, label: "Chat", description: "Team chat rooms", path: "/chat" },
+  { icon: BookOpen, label: "Diary", description: "Write in your digital diary", path: "/digital-diary" },
 ];
 
 // Create items (for archaeologists)
@@ -36,8 +36,8 @@ const createItems = [
 
 // Gift Shop items
 const giftShopItems = [
-  { icon: Heart, label: "Donate Funds", description: "Support archaeological preservation", path: "/donations" },
-  { icon: Store, label: "Buy Gifts", description: "Browse and purchase items", path: "/gift-shop" },
+  { icon: Store, label: "Merchandise", description: "Browse and purchase items", path: "/gift-shop" },
+  { icon: Box, label: "3D Artifacts", description: "Explore 3D artifact models", path: "/artifacts?type=3d" },
 ];
 
 // Account items (for authenticated users)
@@ -45,9 +45,7 @@ const accountItems = [
   { icon: User, label: "Profile", description: "View your profile", path: "/account" },
   { icon: Lock, label: "Change Password", description: "Update your password", path: "/edit-profile" },
   { icon: Settings, label: "Settings", description: "App settings", path: "/account" },
-  { icon: Info, label: "About Us", description: "Learn about ArchePal", path: "/about-us" },
-  { icon: Mail, label: "Contact Us", description: "Get in touch", path: "/contact" },
-  { icon: MessageSquare, label: "Give Feedback", description: "Share your thoughts", path: "/feedback" },
+  { icon: Trash2, label: "Deactivate Account", description: "Delete your account permanently", path: "/deactivate", destructive: true },
 ];
 
 export const BottomNav = () => {
@@ -57,6 +55,7 @@ export const BottomNav = () => {
   const { isArchaeologist } = useArchaeologist();
   const { isSuperAdmin, isAdmin, isMember } = useUser();
   const { isDark, toggle: toggleDark } = useDarkMode();
+  const { theme, toggleTheme } = useTheme();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isGiftShopSheetOpen, setIsGiftShopSheetOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -99,6 +98,11 @@ export const BottomNav = () => {
 
   // Check if current path matches explore items
   const isExploreActive = exploreItems.some(item => location.pathname === item.path);
+
+  // Gift Shop active check
+  const isGiftShopActive =
+    location.pathname === "/gift-shop" ||
+    (location.pathname === "/artifacts" && location.search === "?type=3d");
 
   return (
     <>
@@ -149,8 +153,8 @@ export const BottomNav = () => {
             <span className="text-micro font-medium leading-snug font-sans tracking-wide">Explore</span>
           </button>
 
-          {/* Center Create Button - Only for archaeologists */}
-          {isAuthenticated && isArchaeologist ? (
+          {/* Center Create Button - For archaeologists, members, and admins */}
+          {isAuthenticated && (isArchaeologist || isMember || isAdmin) ? (
             <button
               onClick={handleCreateClick}
               className="flex items-center justify-center w-14 h-14 -mt-7 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 active:scale-95 transition-all duration-200 ring-4 ring-background"
@@ -159,21 +163,21 @@ export const BottomNav = () => {
               <Plus className="w-7 h-7" />
             </button>
           ) : (
-            // Placeholder for non-archaeologists to maintain spacing
+            // Placeholder for non-eligible users to maintain spacing
             <div className="w-14 h-14 -mt-7" />
           )}
 
-          {/* Diary */}
+          {/* Gift Shop — Tab 4 */}
           <button
-            onClick={() => navigate("/digital-diary")}
+            onClick={() => setIsGiftShopSheetOpen(true)}
             className={`flex flex-col items-center gap-0.5 p-3 min-w-[4rem] rounded-xl transition-all duration-200 active:scale-95 ${
-              location.pathname === "/digital-diary"
+              isGiftShopActive
                 ? "text-primary bg-primary/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >
-            <BookOpen className="w-6 h-6" />
-            <span className="text-micro font-medium leading-snug font-sans tracking-wide">Diary</span>
+            <Store className="w-6 h-6" />
+            <span className="text-micro font-medium leading-snug font-sans tracking-wide">Gift Shop</span>
           </button>
 
           {/* Account / More Menu */}
@@ -288,31 +292,9 @@ export const BottomNav = () => {
                     <div className="border-t border-border my-2" />
                   </>
                 )}
-                {/* Gift Shop items */}
-                {giftShopItems.map((item) => (
-                  <Button
-                    key={item.path}
-                    variant="ghost"
-                    className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
-                    onClick={() => handleMenuItemClick(item.path)}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      location.pathname === item.path ? "bg-primary/20" : "bg-muted"
-                    }`}>
-                      <item.icon className={`w-5 h-5 ${
-                        location.pathname === item.path ? "text-primary" : "text-muted-foreground"
-                      }`} />
-                    </div>
-                    <div className="text-left flex-1">
-                      <div className="text-body font-semibold text-foreground font-sans leading-snug">{item.label}</div>
-                      <div className="text-caption text-muted-foreground font-sans leading-snug">{item.description}</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                ))}
+                {/* Admin section */}
                 {isAuthenticated && isAdmin && (
                   <>
-                    <div className="border-t border-border my-2" />
                     <Button
                       variant="ghost"
                       className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
@@ -369,30 +351,43 @@ export const BottomNav = () => {
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     )}
+                    <div className="border-t border-border my-2" />
                   </>
                 )}
-                <div className="border-t border-border my-2" />
                 {accountItems.map((item) => (
                   <Button
                     key={item.label}
                     variant="ghost"
-                    className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
+                    className={`w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start ${
+                      item.destructive ? "hover:bg-destructive/10" : ""
+                    }`}
                     onClick={() => handleMenuItemClick(item.path)}
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      location.pathname === item.path && item.label === "Profile" ? "bg-primary/20" : "bg-muted"
+                      item.destructive
+                        ? "bg-destructive/10"
+                        : location.pathname === item.path && item.label === "Profile"
+                          ? "bg-primary/20"
+                          : "bg-muted"
                     }`}>
                       <item.icon className={`w-5 h-5 ${
-                        location.pathname === item.path && item.label === "Profile" ? "text-primary" : "text-muted-foreground"
+                        item.destructive
+                          ? "text-destructive"
+                          : location.pathname === item.path && item.label === "Profile"
+                            ? "text-primary"
+                            : "text-muted-foreground"
                       }`} />
                     </div>
                     <div className="text-left flex-1">
-                      <div className="text-body font-semibold text-foreground font-sans leading-snug">{item.label}</div>
+                      <div className={`text-body font-semibold font-sans leading-snug ${
+                        item.destructive ? "text-destructive" : "text-foreground"
+                      }`}>{item.label}</div>
                       <div className="text-caption text-muted-foreground font-sans leading-snug">{item.description}</div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 ))}
+<<<<<<< HEAD
                 {/* Dark Mode Toggle */}
                 <Button
                   variant="ghost"
@@ -405,6 +400,26 @@ export const BottomNav = () => {
                   <div className="text-left flex-1">
                     <div className="text-body font-semibold text-foreground font-sans leading-snug">{isDark ? "Light Mode" : "Dark Mode"}</div>
                     <div className="text-caption text-muted-foreground font-sans leading-snug">Switch appearance</div>
+=======
+                {/* Theme Toggle */}
+                <Button
+                  variant="ghost"
+                  className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
+                  onClick={toggleTheme}
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
+                    {theme === 'dark'
+                      ? <Sun className="w-5 h-5 text-muted-foreground" />
+                      : <Moon className="w-5 h-5 text-muted-foreground" />}
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="text-body font-semibold text-foreground font-sans leading-snug">
+                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </div>
+                    <div className="text-caption text-muted-foreground font-sans leading-snug">
+                      Switch appearance
+                    </div>
+>>>>>>> c8f9bad (final)
                   </div>
                 </Button>
                 {/* Logout Button */}
@@ -425,6 +440,7 @@ export const BottomNav = () => {
             ) : (
               // Non-authenticated menu
               <>
+<<<<<<< HEAD
                 <Button
                   variant="ghost"
                   className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
@@ -464,7 +480,25 @@ export const BottomNav = () => {
                     <div className="text-caption text-muted-foreground font-sans leading-snug">Switch appearance</div>
                   </div>
                 </Button>
+=======
+>>>>>>> c8f9bad (final)
                 <div className="pt-4 mt-4 border-t border-border space-y-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
+                    onClick={toggleTheme}
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
+                      {theme === 'dark'
+                        ? <Sun className="w-5 h-5 text-muted-foreground" />
+                        : <Moon className="w-5 h-5 text-muted-foreground" />}
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="text-body font-semibold text-foreground font-sans leading-snug">
+                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                      </div>
+                    </div>
+                  </Button>
                   <Button
                     className="w-full h-11"
                     onClick={() => handleMenuItemClick("/authentication/sign-in")}
@@ -539,9 +573,7 @@ export const BottomNav = () => {
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                   location.pathname === item.path ? "bg-primary/20" : "bg-primary/10"
                 }`}>
-                  <item.icon className={`w-5 h-5 ${
-                    location.pathname === item.path ? "text-primary" : "text-primary"
-                  }`} />
+                  <item.icon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left flex-1">
                   <div className="text-body font-semibold text-foreground font-sans leading-snug">{item.label}</div>

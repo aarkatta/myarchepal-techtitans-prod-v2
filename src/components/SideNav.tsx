@@ -5,32 +5,29 @@ import {
   Newspaper,
   Calendar,
   Store,
-  Plus,
-  PlusSquare,
+  Box,
   User,
-  LogIn,
-  ChevronDown,
-  Info,
-  Mail,
-  Settings,
   Lock,
+  Settings,
   LogOut,
+  LogIn,
   BookOpen,
-  MessageSquare,
   Building2,
   Shield,
   FileText,
   ClipboardList,
   Moon,
   Sun,
+  ChevronDown,
+  MapPin,
+  Users,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useDarkMode } from "@/hooks/use-dark-mode";
-import { CreateSiteModal } from "@/components/CreateSiteModal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useArchaeologist } from "@/hooks/use-archaeologist";
 import { useUser } from "@/hooks/use-user";
 import {
   Collapsible,
@@ -38,58 +35,37 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Explore submenu items
-const exploreItems = [
-  { icon: Compass, label: "Sites", path: "/site-lists" },
-  { icon: Package, label: "Artifacts", path: "/artifacts" },
-  { icon: Newspaper, label: "Articles", path: "/articles" },
-  { icon: Calendar, label: "Events", path: "/events" },
-];
-
-// Create submenu items (for archaeologists)
-const createItems = [
-  { icon: PlusSquare, label: "Create Site", path: "/new-site" },
-  { icon: Package, label: "Create Artifact", path: "/create-artifact" },
-  { icon: Newspaper, label: "Create Article", path: "/create-article" },
-  { icon: Calendar, label: "Create Event", path: "/create-event" },
-  { icon: BookOpen, label: "Diary", path: "/digital-diary" },
-];
-
-// Gift Shop submenu items (Donate Funds hidden on desktop)
-const giftShopItems = [
-  { icon: Store, label: "Buy Gifts", path: "/gift-shop" },
-];
-
-// Account submenu items (for authenticated users)
-const accountItems = [
-  { icon: User, label: "Profile", path: "/account" },
-  { icon: Lock, label: "Change Password", path: "/edit-profile" },
-  { icon: Settings, label: "Settings", path: "/account" },
-  { icon: Info, label: "About Us", path: "/about-us" },
-  { icon: Mail, label: "Contact Us", path: "/contact" },
-  { icon: MessageSquare, label: "Give Feedback", path: "/feedback" },
-];
-
 export const SideNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
-  const { isArchaeologist } = useArchaeologist();
   const { isSuperAdmin, isAdmin, isMember } = useUser();
   const { isDark, toggle: toggleDark } = useDarkMode();
-  const [isExploreOpen, setIsExploreOpen] = useState(true);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isGiftShopOpen, setIsGiftShopOpen] = useState(false);
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [createSiteModalOpen, setCreateSiteModalOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
-  const isExploreActive = exploreItems.some(item => isActive(item.path));
-  const isGiftShopActive = giftShopItems.some(item => isActive(item.path));
-  const isAccountActive = accountItems.some(item => isActive(item.path));
-  const isAdminActive = isActive('/admin') || isActive('/org-dashboard') || location.pathname.startsWith('/templates') || location.pathname.startsWith('/admin-assignments') || location.pathname.startsWith('/assign-form');
+  const is3DArtifactsActive =
+    location.pathname === "/artifacts" &&
+    location.search === "?type=3d";
+
+  const isGiftShopActive =
+    isActive("/gift-shop") || is3DArtifactsActive;
+
+  const isAdminActive =
+    isActive("/admin") ||
+    isActive("/org-dashboard") ||
+    location.pathname.startsWith("/templates") ||
+    location.pathname.startsWith("/admin-assignments") ||
+    location.pathname.startsWith("/assign-form") ||
+    isActive("/admin-users");
+
+  const isAccountActive =
+    isActive("/account") ||
+    isActive("/edit-profile") ||
+    isActive("/deactivate");
 
   const handleLogout = async () => {
     try {
@@ -99,6 +75,20 @@ export const SideNav = () => {
       console.error("Error signing out:", error);
     }
   };
+
+  const navItemClass = (active: boolean) =>
+    `w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-1 ${
+      active
+        ? "bg-primary/10 text-primary"
+        : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
+    }`;
+
+  const subItemClass = (active: boolean) =>
+    `w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
+      active
+        ? "text-primary bg-primary/5"
+        : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
+    }`;
 
   return (
     <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 xl:w-72 bg-card border-r border-border z-50">
@@ -124,165 +114,56 @@ export const SideNav = () => {
         {/* Home */}
         <button
           onClick={() => navigate("/")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-1 ${
-            isActive("/")
-              ? "bg-primary/10 text-primary"
-              : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
-          }`}
+          className={navItemClass(isActive("/"))}
         >
-          <Home className={`w-5 h-5 transition-transform group-hover:scale-110 ${
-            isActive("/") ? "text-primary" : ""
-          }`} />
+          <Home className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive("/") ? "text-primary" : ""}`} />
           <span>Home</span>
         </button>
 
-        {/* Explore Collapsible */}
-        <Collapsible open={isExploreOpen} onOpenChange={setIsExploreOpen} className="mb-1">
-          <CollapsibleTrigger asChild>
-            <button
-              className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isExploreActive && !isExploreOpen
-                  ? "bg-primary/10 text-primary"
-                  : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Compass className={`w-5 h-5 ${isExploreActive ? "text-primary" : ""}`} />
-                Explore
-              </span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isExploreOpen ? 'rotate-180' : ''}`} />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-1 space-y-0.5">
-            {exploreItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                  isActive(item.path)
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Sites */}
+        <button
+          onClick={() => navigate("/site-lists")}
+          className={navItemClass(isActive("/site-lists"))}
+        >
+          <Compass className={`w-5 h-5 ${isActive("/site-lists") ? "text-primary" : ""}`} />
+          <span>Sites</span>
+        </button>
 
-        {/* Create Collapsible - For Archaeologists, Org Members, and Admins */}
-        {isAuthenticated && (isArchaeologist || isMember || isAdmin) && (
-          <Collapsible open={isCreateOpen} onOpenChange={setIsCreateOpen} className="mb-1">
-            <CollapsibleTrigger asChild>
-              <button
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
-              >
-                <span className="flex items-center gap-3">
-                  <Plus className="w-5 h-5" />
-                  Create
-                </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isCreateOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-1 space-y-0.5">
-              {createItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    setIsCreateOpen(false);
-                    if (item.path === '/new-site') {
-                      setCreateSiteModalOpen(true);
-                    } else {
-                      navigate(item.path);
-                    }
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              ))}
-            </CollapsibleContent>
-            <CreateSiteModal open={createSiteModalOpen} onOpenChange={setCreateSiteModalOpen} />
-          </Collapsible>
-        )}
+        {/* Diary */}
+        <button
+          onClick={() => navigate("/digital-diary")}
+          className={navItemClass(isActive("/digital-diary"))}
+        >
+          <BookOpen className={`w-5 h-5 ${isActive("/digital-diary") ? "text-primary" : ""}`} />
+          <span>Diary</span>
+        </button>
 
-        {/* Admin/Manage Collapsible - For Admins and Org Members */}
-        {isAuthenticated && (isAdmin || isMember) && (
-          <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="mb-1">
-            <CollapsibleTrigger asChild>
-              <button
-                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isAdminActive && !isAdminOpen
-                    ? "bg-primary/10 text-primary"
-                    : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <Shield className={`w-5 h-5 ${isAdminActive ? "text-primary" : ""}`} />
-                  {isAdmin ? 'Admin' : 'Manage'}
-                </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-1 space-y-0.5">
-              {/* Org Dashboard - for admins only */}
-              {isAdmin && (
-                <button
-                  onClick={() => navigate('/org-dashboard')}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                    isActive('/org-dashboard')
-                      ? "text-primary bg-primary/5"
-                      : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <Building2 className="w-4 h-4" />
-                  Organization
-                </button>
-              )}
-              {/* Form Templates */}
-              <button
-                onClick={() => navigate('/templates')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                  location.pathname.startsWith('/templates')
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                Form Templates
-              </button>
-              {/* Site Assignments */}
-              <button
-                onClick={() => navigate('/admin-assignments')}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                  location.pathname.startsWith('/admin-assignments') || location.pathname.startsWith('/assign-form')
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <ClipboardList className="w-4 h-4" />
-                Site Assignments
-              </button>
-              {/* Super Admin Dashboard - only for super admins */}
-              {isSuperAdmin && (
-                <button
-                  onClick={() => navigate('/admin')}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                    isActive('/admin')
-                      ? "text-primary bg-primary/5"
-                      : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  Super Admin
-                </button>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+        {/* Artifacts */}
+        <button
+          onClick={() => navigate("/artifacts")}
+          className={navItemClass(isActive("/artifacts") && !is3DArtifactsActive)}
+        >
+          <Package className={`w-5 h-5 ${isActive("/artifacts") && !is3DArtifactsActive ? "text-primary" : ""}`} />
+          <span>Artifacts</span>
+        </button>
 
+        {/* Articles */}
+        <button
+          onClick={() => navigate("/articles")}
+          className={navItemClass(isActive("/articles"))}
+        >
+          <Newspaper className={`w-5 h-5 ${isActive("/articles") ? "text-primary" : ""}`} />
+          <span>Articles</span>
+        </button>
+
+        {/* Events */}
+        <button
+          onClick={() => navigate("/events")}
+          className={navItemClass(isActive("/events"))}
+        >
+          <Calendar className={`w-5 h-5 ${isActive("/events") ? "text-primary" : ""}`} />
+          <span>Events</span>
+        </button>
 
         {/* Gift Shop Collapsible */}
         <Collapsible open={isGiftShopOpen} onOpenChange={setIsGiftShopOpen} className="mb-1">
@@ -298,45 +179,118 @@ export const SideNav = () => {
                 <Store className={`w-5 h-5 ${isGiftShopActive ? "text-primary" : ""}`} />
                 Gift Shop
               </span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isGiftShopOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform ${isGiftShopOpen ? "rotate-180" : ""}`} />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-1 space-y-0.5">
-            {giftShopItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                  isActive(item.path)
-                    ? "text-primary bg-primary/5"
-                    : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            ))}
+            <button
+              onClick={() => navigate("/gift-shop")}
+              className={subItemClass(isActive("/gift-shop") && !is3DArtifactsActive)}
+            >
+              <Store className="w-4 h-4" />
+              Merchandise
+            </button>
+            <button
+              onClick={() => navigate("/artifacts?type=3d")}
+              className={subItemClass(is3DArtifactsActive)}
+            >
+              <Box className="w-4 h-4" />
+              3D Artifacts
+            </button>
           </CollapsibleContent>
         </Collapsible>
 
-        {/* My Assignments — MEMBER role only (not shown to admins) */}
+        {/* Admin Collapsible — for admins only */}
+        {isAuthenticated && isAdmin && (
+          <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="mb-1">
+            <CollapsibleTrigger asChild>
+              <button
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  isAdminActive && !isAdminOpen
+                    ? "bg-primary/10 text-primary"
+                    : "text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <Shield className={`w-5 h-5 ${isAdminActive ? "text-primary" : ""}`} />
+                  Admin
+                </span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isAdminOpen ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-1 space-y-0.5">
+              <button
+                onClick={() => navigate("/templates")}
+                className={subItemClass(location.pathname.startsWith("/templates"))}
+              >
+                <FileText className="w-4 h-4" />
+                Site Forms
+              </button>
+              <button
+                onClick={() => navigate("/org-dashboard")}
+                className={subItemClass(isActive("/org-dashboard"))}
+              >
+                <Building2 className="w-4 h-4" />
+                Organization
+              </button>
+              <button
+                onClick={() => navigate("/admin-assignments")}
+                className={subItemClass(
+                  location.pathname.startsWith("/admin-assignments") ||
+                  location.pathname.startsWith("/assign-form")
+                )}
+              >
+                <MapPin className="w-4 h-4" />
+                Sites
+              </button>
+              <button
+                onClick={() => navigate("/admin-users")}
+                className={subItemClass(isActive("/admin-users"))}
+              >
+                <Users className="w-4 h-4" />
+                Users
+              </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => navigate("/admin")}
+                  className={subItemClass(isActive("/admin"))}
+                >
+                  <Shield className="w-4 h-4" />
+                  Super Admin
+                </button>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* My Assignments — MEMBER only (not admin) */}
         {isAuthenticated && isMember && !isAdmin && (
           <button
-            onClick={() => navigate('/my-assignments')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 mb-1 ${
-              location.pathname.startsWith('/my-assignments') || location.pathname.startsWith('/form/')
-                ? 'bg-primary/10 text-primary'
-                : 'text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50'
-            }`}
+            onClick={() => navigate("/my-assignments")}
+            className={navItemClass(
+              location.pathname.startsWith("/my-assignments") ||
+              location.pathname.startsWith("/form/")
+            )}
           >
-            <ClipboardList className={`w-5 h-5 ${location.pathname.startsWith('/my-assignments') || location.pathname.startsWith('/form/') ? 'text-primary' : ''}`} />
+            <ClipboardList
+              className={`w-5 h-5 ${
+                location.pathname.startsWith("/my-assignments") ||
+                location.pathname.startsWith("/form/")
+                  ? "text-primary"
+                  : ""
+              }`}
+            />
             <span>My Assignments</span>
           </button>
         )}
 
-        {/* Account Collapsible - Only for Authenticated Users */}
+        {/* Account Collapsible — authenticated users only */}
         {isAuthenticated && (
-          <Collapsible open={isAccountOpen} onOpenChange={setIsAccountOpen} className="mt-4 pt-4 border-t border-border/50">
+          <Collapsible
+            open={isAccountOpen}
+            onOpenChange={setIsAccountOpen}
+            className="mt-4 pt-4 border-t border-border/50"
+          >
             <CollapsibleTrigger asChild>
               <button
                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -349,25 +303,38 @@ export const SideNav = () => {
                   <User className={`w-5 h-5 ${isAccountActive ? "text-primary" : ""}`} />
                   Account
                 </span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${isAccountOpen ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1 space-y-0.5">
-              {accountItems.map((item) => (
-                <button
-                  key={item.path + item.label}
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors ${
-                    isActive(item.path) && item.label === "Profile"
-                      ? "text-primary bg-primary/5"
-                      : "text-slate-600 dark:text-slate-400 hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              ))}
-              {/* Logout Button */}
+              <button
+                onClick={() => navigate("/account")}
+                className={subItemClass(isActive("/account"))}
+              >
+                <User className="w-4 h-4" />
+                Profile
+              </button>
+              <button
+                onClick={() => navigate("/edit-profile")}
+                className={subItemClass(isActive("/edit-profile"))}
+              >
+                <Lock className="w-4 h-4" />
+                Change Password
+              </button>
+              <button
+                onClick={() => navigate("/account")}
+                className={subItemClass(false)}
+              >
+                <Settings className="w-4 h-4" />
+                Preferences
+              </button>
+              <button
+                onClick={() => navigate("/deactivate")}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors text-destructive hover:bg-destructive/10`}
+              >
+                <Trash2 className="w-4 h-4" />
+                Deactivate
+              </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-2.5 pl-12 text-sm font-medium rounded-lg transition-colors text-destructive hover:bg-destructive/10"

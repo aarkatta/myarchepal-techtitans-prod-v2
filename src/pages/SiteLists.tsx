@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, FileText, Search, Loader2, Plus, Star, WifiOff, Trash2 } from "lucide-react";
+import { MapPin, Calendar, Users, FileText, Search, Loader2, Plus, Star, WifiOff, Trash2, Filter } from "lucide-react";
 import { CreateSiteModal } from "@/components/CreateSiteModal";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +25,8 @@ import { useSites } from "@/hooks/use-sites";
 import { Site, SitesService } from "@/services/sites";
 import { useAuth } from "@/hooks/use-auth";
 import { useUser } from "@/hooks/use-user";
-import { useArchaeologist } from "@/hooks/use-archaeologist";
 import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
-import { ArchaeologistService } from "@/services/archaeologists";
+import { UserService } from "@/services/users";
 import { useToast } from "@/components/ui/use-toast";
 import { Timestamp } from "firebase/firestore";
 import { useNetworkStatus } from "@/hooks/use-network";
@@ -36,20 +36,39 @@ import { parseDate } from "@/lib/utils";
 const SiteLists = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { organization, isAdmin } = useUser();
-  const { isArchaeologist } = useArchaeologist();
+  const { user: firestoreUser, organization, isAdmin } = useUser();
   const { toast } = useToast();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { isOnline } = useNetworkStatus();
   const { sites, loading, error, fetchSites } = useSites();
 
-  // Check if user is in a Pro/Enterprise organization (non-default)
-  const isProOrg = organization &&
-    organization.id !== DEFAULT_ORGANIZATION_ID &&
-    (organization.subscriptionLevel === 'Pro' || organization.subscriptionLevel === 'Enterprise');
+  // Org-scoped sites fetched directly from Firestore (avoids client-side filter on all-sites)
+  const [orgSites, setOrgSites] = useState<Site[]>([]);
+  const [orgSitesLoading, setOrgSitesLoading] = useState(false);
+
+  const fetchOrgSites = async (orgId: string) => {
+    setOrgSitesLoading(true);
+    try {
+      const results = await SitesService.getSitesByOrganization(orgId);
+      setOrgSites(results);
+    } catch (err) {
+      console.error('Error fetching org sites:', err);
+    } finally {
+      setOrgSitesLoading(false);
+    }
+  };
+
+  // Mirror AdminSiteAssignments pattern — wait for orgId before fetching
+  useEffect(() => {
+    const orgId = organization?.id ?? firestoreUser?.organizationId;
+    if (!orgId) return;
+    fetchOrgSites(orgId);
+  }, [organization?.id, firestoreUser?.organizationId]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [settingActiveProject, setSettingActiveProject] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [usingCachedData, setUsingCachedData] = useState(false);
@@ -85,25 +104,24 @@ const SiteLists = () => {
 
   // Determine which sites to display (memoized — avoids new reference on every render)
   const displaySites = useMemo(() => {
-    const baseSites = (usingCachedData ? cachedSites : sites).filter(site => !site.deletedAt);
     if (user) {
-      return isProOrg
-        ? baseSites.filter(site => site.organizationId === organization?.id)
-        : baseSites.filter(site => site.createdBy === user.uid);
+      return orgSites;
     }
+    // Unauthenticated: show public sites from all-sites list
+    const baseSites = (usingCachedData ? cachedSites : sites).filter(site => !site.deletedAt);
     return baseSites.filter(site =>
       site.visibility === 'public' &&
       site.organizationId &&
       site.organizationId !== DEFAULT_ORGANIZATION_ID
     );
-  }, [usingCachedData, cachedSites, sites, user, isProOrg, organization?.id]);
+  }, [user, orgSites, usingCachedData, cachedSites, sites]);
 
-  // Fetch active project ID for archaeologist
+  // Fetch active project ID for the logged-in user
   useEffect(() => {
     const fetchActiveProject = async () => {
-      if (user && isArchaeologist) {
+      if (user) {
         try {
-          const activeId = await ArchaeologistService.getActiveProjectId(user.uid);
+          const activeId = await UserService.getActiveProjectId(user.uid);
           setActiveProjectId(activeId);
         } catch (error) {
           console.error("Error fetching active project:", error);
@@ -112,19 +130,36 @@ const SiteLists = () => {
     };
 
     fetchActiveProject();
-  }, [user, isArchaeologist]);
+  }, [user]);
 
   const filteredSites = useMemo(() => {
-    if (!searchQuery.trim()) return displaySites;
-    const query = searchQuery.toLowerCase();
-    return displaySites.filter(site =>
-      site.name.toLowerCase().includes(query) ||
-      site.location?.address?.toLowerCase().includes(query) ||
-      site.location?.country?.toLowerCase().includes(query) ||
-      site.location?.region?.toLowerCase().includes(query) ||
-      site.description?.toLowerCase().includes(query)
-    );
-  }, [searchQuery, displaySites]);
+    let result = displaySites;
+
+    // Status filter
+    if (statusFilter === 'active') {
+      result = result.filter(site => !site.deletedAt);
+    } else if (statusFilter === 'archived') {
+      result = result.filter(site => !!site.deletedAt);
+    } else if (statusFilter === 'unassigned') {
+      result = result.filter(site => !site.submissionStatus && !site.deletedAt);
+    } else if (statusFilter !== 'all') {
+      result = result.filter(site => site.submissionStatus === statusFilter);
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(site =>
+        site.name.toLowerCase().includes(q) ||
+        site.location?.address?.toLowerCase().includes(q) ||
+        site.location?.country?.toLowerCase().includes(q) ||
+        site.location?.region?.toLowerCase().includes(q) ||
+        site.description?.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [searchQuery, statusFilter, displaySites]);
 
   const formatDate = (date: Date | Timestamp | undefined | any) => {
     const d = parseDate(date);
@@ -155,24 +190,15 @@ const SiteLists = () => {
   };
 
   const handleToggleActiveProject = async (e: React.MouseEvent, siteId: string) => {
-    e.stopPropagation(); // Prevent navigation when clicking the star
+    e.stopPropagation();
 
-    if (!user || !isArchaeologist) {
-      toast({
-        title: "Access denied",
-        description: "Only archaeologists can mark active projects",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!user) return;
 
     try {
       setSettingActiveProject(true);
 
-      // If this site is already active, unmark it; otherwise, mark it as active
       const newActiveProjectId = activeProjectId === siteId ? null : siteId;
-
-      await ArchaeologistService.setActiveProject(user.uid, newActiveProjectId);
+      await UserService.setActiveProject(user.uid, newActiveProjectId);
       setActiveProjectId(newActiveProjectId);
 
       toast({
@@ -198,7 +224,11 @@ const SiteLists = () => {
     try {
       await SitesService.deleteSite(siteId);
       toast({ title: "Site deleted", description: "The site has been archived and removed from the list." });
-      fetchSites();
+      if (user && firestoreUser?.organizationId) {
+        fetchOrgSites(firestoreUser.organizationId);
+      } else {
+        fetchSites();
+      }
     } catch (err) {
       console.error(err);
       toast({ title: "Error", description: "Failed to delete the site. Please try again.", variant: "destructive" });
@@ -208,8 +238,8 @@ const SiteLists = () => {
     }
   };
 
-  // Show loading only if we don't have cached data
-  if (loading && cachedSites.length === 0) {
+  // Show loading only if we don't have data yet
+  if ((user ? orgSitesLoading : loading) && cachedSites.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -271,14 +301,58 @@ const SiteLists = () => {
             </div>
           </div>
 
-          <div className="relative mb-3 sm:mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search sites..."
-              className="pl-10 h-11 lg:h-12 bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Status badge pills */}
+          {user && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {[
+                { key: 'all', label: `All (${displaySites.length})` },
+                { key: 'active', label: `Active (${displaySites.filter(s => !s.deletedAt).length})` },
+                { key: 'archived', label: `Archived (${displaySites.filter(s => !!s.deletedAt).length})` },
+                { key: 'unassigned', label: `Unassigned (${displaySites.filter(s => !s.submissionStatus && !s.deletedAt).length})` },
+                { key: 'in_progress', label: `In Progress (${displaySites.filter(s => s.submissionStatus === 'in_progress').length})` },
+                { key: 'submitted', label: `Submitted (${displaySites.filter(s => s.submissionStatus === 'submitted').length})` },
+                { key: 'reviewed', label: `Reviewed (${displaySites.filter(s => s.submissionStatus === 'reviewed').length})` },
+              ].map(({ key, label }) => (
+                <Badge
+                  key={key}
+                  variant={statusFilter === key ? 'default' : 'outline'}
+                  className="cursor-pointer select-none text-[10px] sm:text-xs"
+                  onClick={() => setStatusFilter(key)}
+                >
+                  {label}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Search + status dropdown */}
+          <div className="flex gap-2 mb-3 sm:mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search sites..."
+                className="pl-10 h-11 lg:h-12 bg-muted/50 border-0 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            {user && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-auto sm:w-44 h-11 lg:h-12 shrink-0">
+                  <Filter className="w-4 h-4 mr-1.5" />
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="reviewed">Reviewed</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
@@ -375,7 +449,7 @@ const SiteLists = () => {
                                 </Badge>
                               )}
                             </div>
-                            {isArchaeologist && (
+                            {user && site.assignedConsultantId === user.uid && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -440,7 +514,7 @@ const SiteLists = () => {
                         </div>
                       </div>
                       {/* Site Conditions - Only for Active Project */}
-                      {isActiveProject && user && isArchaeologist && site.location?.latitude && site.location?.longitude && (
+                      {isActiveProject && user && site.assignedConsultantId === user.uid && site.location?.latitude && site.location?.longitude && (
                         <div className="mt-3 pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
                           <SiteConditions
                             latitude={site.location.latitude}

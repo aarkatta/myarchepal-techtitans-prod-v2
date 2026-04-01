@@ -195,18 +195,18 @@ const Artifacts = () => {
 
           <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
             <Card className="p-2.5 sm:p-3 lg:p-4 border-border/50 text-center bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-md transition-shadow">
-              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary">{artifacts.length}</p>
+              <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary">{orgFilteredArtifacts.length}</p>
               <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground font-medium">Total</p>
             </Card>
             <Card className="p-2.5 sm:p-3 lg:p-4 border-border/50 text-center bg-gradient-to-br from-orange-500/5 to-orange-500/10 hover:shadow-md transition-shadow">
               <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-orange-600">
-                {artifacts.filter(a => a.significance === 'High' || a.significance === 'Very High').length}
+                {orgFilteredArtifacts.filter(a => a.significance === 'High' || a.significance === 'Very High').length}
               </p>
               <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground font-medium">Significant</p>
             </Card>
             <Card className="p-2.5 sm:p-3 lg:p-4 border-border/50 text-center bg-gradient-to-br from-green-500/5 to-green-500/10 hover:shadow-md transition-shadow">
               <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
-                {artifacts.filter(a => a.condition === 'Excellent' || a.condition === 'Good').length}
+                {orgFilteredArtifacts.filter(a => a.condition === 'Excellent' || a.condition === 'Good').length}
               </p>
               <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground font-medium">Good</p>
             </Card>

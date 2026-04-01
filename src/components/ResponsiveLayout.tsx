@@ -2,6 +2,9 @@ import { ReactNode } from "react";
 import { SideNav } from "./SideNav";
 import { BottomNav } from "./BottomNav";
 import { Footer } from "./Footer";
+import { useUser } from "@/hooks/use-user";
+import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
+import { TriangleAlert } from "lucide-react";
 
 interface ResponsiveLayoutProps {
   children: ReactNode;
@@ -31,10 +34,26 @@ export const ResponsiveLayout = ({
   fullWidth = false,
   className = "",
 }: ResponsiveLayoutProps) => {
+  const { organization } = useUser();
+  const isDefaultOrg = !organization || organization.id === DEFAULT_ORGANIZATION_ID;
+
   return (
     <div className="min-h-screen bg-background safe-top">
       {/* Side Navigation - Only visible on desktop (lg+) */}
       <SideNav />
+
+      {/* Demo / Default-Org Warning Banner */}
+      {isDefaultOrg && (
+        <div className="lg:ml-64 xl:ml-72 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
+          <TriangleAlert className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>
+            This is a demo environment — do not enter real data. For real use, contact us at{" "}
+            <a href="mailto:techtitansnc@gmail.com" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-200">
+              techtitansnc@gmail.com
+            </a>
+          </span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className={`

@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Bell, User, LogIn, Mail, WifiOff, Building2 } from "lucide-react";
+import { Bell, User, LogIn, LogOut, Mail, WifiOff, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 
 export const AppHeader = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { organization } = useUser();
   const { isOnline } = useNetworkStatus();
   const [archaeologistProfile, setArchaeologistProfile] = useState<Archaeologist | null>(null);
@@ -126,23 +126,33 @@ export const AppHeader = () => {
               </div>
             )}
             {isAuthenticated ? (
-              <button
-                className="p-2 md:p-2.5 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
-                onClick={() => navigate("/account")}
-                aria-label="Account"
-              >
-                <User className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
-              </button>
+              <>
+                <button
+                  className="p-2 md:p-2.5 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
+                  onClick={() => navigate("/account")}
+                  aria-label="Account"
+                >
+                  <User className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => logout()}
+                  className="gap-1.5 text-body-sm px-2 md:px-3 h-8 md:h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+              </>
             ) : (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate("/contact")}
+                  onClick={() => navigate("/authentication/sign-up")}
                   className="hidden xs:flex gap-1.5 text-body-sm px-2 md:px-3 h-8 md:h-9 font-medium"
                 >
-                  <Mail className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  <span className="hidden sm:inline">Contact</span>
+                  Sign Up
                 </Button>
                 <Button
                   variant="default"
@@ -157,7 +167,7 @@ export const AppHeader = () => {
             )}
           </div>
 
-          {/* Desktop: Account button */}
+          {/* Desktop: Account / Auth buttons */}
           <div className="hidden lg:flex items-center gap-3">
             {/* Desktop Offline Indicator */}
             {!isOnline && (
@@ -166,14 +176,45 @@ export const AppHeader = () => {
                 <span>Offline Mode</span>
               </div>
             )}
-            {isAuthenticated && (
-              <button
-                className="p-2.5 hover:bg-muted rounded-full transition-all duration-200"
-                onClick={() => navigate("/account")}
-                aria-label="Account"
-              >
-                <User className="w-6 h-6 text-muted-foreground" />
-              </button>
+            {isAuthenticated ? (
+              <>
+                <button
+                  className="p-2.5 hover:bg-muted rounded-full transition-all duration-200"
+                  onClick={() => navigate("/account")}
+                  aria-label="Account"
+                >
+                  <User className="w-6 h-6 text-muted-foreground" />
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => logout()}
+                  className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/authentication/sign-up")}
+                  className="gap-1.5 font-medium"
+                >
+                  Sign Up
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate("/authentication/sign-in")}
+                  className="gap-1.5 font-medium text-white"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign In
+                </Button>
+              </>
             )}
           </div>
         </div>
