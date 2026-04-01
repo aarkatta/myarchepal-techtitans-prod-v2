@@ -78,6 +78,7 @@ import SubmissionDetail from "./pages/SubmissionDetail";
 import UploadFilledForm from "./pages/UploadFilledForm";
 import AdminUsers from "./pages/AdminUsers";
 import Help from "./pages/Help";
+import Giveback from "./pages/Giveback";
 import Deactivate from "./pages/Deactivate";
 import { HelpButton } from "@/components/HelpButton";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -275,6 +276,7 @@ const App = () => {
               </AdminRoute>
             } />
             <Route path="/help" element={<Help />} />
+            <Route path="/giveback" element={<Giveback />} />
             <Route path="/deactivate" element={
               <ProtectedRoute>
                 <Deactivate />
