@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { useDarkMode } from "@/hooks/use-dark-mode";
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useUser } from "@/hooks/use-user";
@@ -39,8 +39,8 @@ export const SideNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
-  const { isSuperAdmin, isAdmin, isMember } = useUser();
-  const { isDark, toggle: toggleDark } = useDarkMode();
+  const { isSuperAdmin, isAdmin, isMember, can } = useUser();
+  const { theme, toggleTheme } = useTheme();
   const [isGiftShopOpen, setIsGiftShopOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
@@ -201,7 +201,7 @@ export const SideNav = () => {
         </Collapsible>
 
         {/* Admin Collapsible — for admins only */}
-        {isAuthenticated && isAdmin && (
+        {isAuthenticated && can('org:manage') && (
           <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="mb-1">
             <CollapsibleTrigger asChild>
               <button
@@ -250,7 +250,7 @@ export const SideNav = () => {
                 <Users className="w-4 h-4" />
                 Users
               </button>
-              {isSuperAdmin && (
+              {can('admin:panel') && (
                 <button
                   onClick={() => navigate("/admin")}
                   className={subItemClass(isActive("/admin"))}
@@ -263,8 +263,8 @@ export const SideNav = () => {
           </Collapsible>
         )}
 
-        {/* My Assignments — MEMBER only (not admin) */}
-        {isAuthenticated && isMember && !isAdmin && (
+        {/* My Assignments — users with assignment view permission (not admins) */}
+        {isAuthenticated && can('assignments:view-own') && !can('org:manage') && (
           <button
             onClick={() => navigate("/my-assignments")}
             className={navItemClass(
@@ -350,11 +350,11 @@ export const SideNav = () => {
       {/* Dark Mode Toggle */}
       <div className="px-4 py-3 border-t border-border">
         <button
-          onClick={toggleDark}
+          onClick={toggleTheme}
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-foreground hover:bg-muted/50 transition-all duration-200"
         >
-          {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          {isDark ? "Light Mode" : "Dark Mode"}
+          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          {theme === 'dark' ? "Light Mode" : "Dark Mode"}
         </button>
       </div>
 

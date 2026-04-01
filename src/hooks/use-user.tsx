@@ -4,6 +4,7 @@ import { UserService } from '@/services/users';
 import { OrganizationService } from '@/services/organizations';
 import { UserRoleService } from '@/services/userRoles';
 import { User, Organization, UserRoleMapping, UserRole, DEFAULT_ORGANIZATION_ID, ROLE_IDS } from '@/types/organization';
+import { policy, type AppPermission } from '@/lib/permissions';
 
 interface UseUserResult {
   user: User | null;
@@ -17,6 +18,8 @@ interface UseUserResult {
   isOrgAdmin: boolean;
   isAdmin: boolean;
   isMember: boolean;
+  /** PermzPlus-backed permission check. Prefer this over boolean flags for new code. */
+  can: (permission: AppPermission) => boolean;
   refreshUser: () => Promise<void>;
 }
 
@@ -106,6 +109,18 @@ export const useUser = (): UseUserResult => {
     user?.role === 'MEMBER'
   );
 
+  const can = useCallback(
+    (permission: AppPermission): boolean => {
+      if (!highestRole) return false;
+      try {
+        return policy.can(highestRole, permission);
+      } catch {
+        return false;
+      }
+    },
+    [highestRole],
+  );
+
   return {
     user,
     organization,
@@ -118,6 +133,7 @@ export const useUser = (): UseUserResult => {
     isOrgAdmin,
     isAdmin,
     isMember,
+    can,
     refreshUser,
   };
 };

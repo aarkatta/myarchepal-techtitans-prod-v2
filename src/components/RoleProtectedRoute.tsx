@@ -6,6 +6,8 @@ import { UserRole } from '@/types/organization';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useCan } from '@/hooks/use-permissions';
+import type { AppPermission } from '@/lib/permissions';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -81,18 +83,67 @@ const AccessDeniedPage: React.FC = () => {
 };
 
 /**
- * Convenience components for common role combinations
+ * Permission-based protected route — backed by PermzPlus.
+ * Prefer this over RoleProtectedRoute for new routes.
+ *
+ * @example
+ * <Route path="/templates" element={
+ *   <PermissionProtectedRoute permission="templates:read">
+ *     <TemplateList />
+ *   </PermissionProtectedRoute>
+ * } />
+ */
+interface PermissionProtectedRouteProps {
+  children: React.ReactNode;
+  permission: AppPermission;
+  redirectTo?: string;
+  showAccessDenied?: boolean;
+}
+
+export const PermissionProtectedRoute: React.FC<PermissionProtectedRouteProps> = ({
+  children,
+  permission,
+  redirectTo = '/authentication/sign-in',
+  showAccessDenied = true,
+}) => {
+  const location = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { loading: userLoading } = useUser();
+  const hasPermission = useCan(permission);
+
+  if (authLoading || userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+  }
+
+  if (!hasPermission) {
+    return showAccessDenied ? <AccessDeniedPage /> : <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+/**
+ * Convenience components for common role combinations.
+ * AdminRoute and SuperAdminRoute use PermzPlus permissions internally.
  */
 export const SuperAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <RoleProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+  <PermissionProtectedRoute permission="admin:panel">
     {children}
-  </RoleProtectedRoute>
+  </PermissionProtectedRoute>
 );
 
 export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <RoleProtectedRoute allowedRoles={['SUPER_ADMIN', 'ORG_ADMIN']}>
+  <PermissionProtectedRoute permission="org:manage">
     {children}
-  </RoleProtectedRoute>
+  </PermissionProtectedRoute>
 );
 
 export default RoleProtectedRoute;

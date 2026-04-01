@@ -82,6 +82,7 @@ import Giveback from "./pages/Giveback";
 import Deactivate from "./pages/Deactivate";
 import { HelpButton } from "@/components/HelpButton";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { PermissionsWrapper } from "@/components/PermissionsWrapper";
 
 // Create React Query client instance
 const queryClient = new QueryClient();
@@ -98,6 +99,8 @@ const App = () => {
     <TooltipProvider>
       {/* Auth provider wraps entire app to provide authentication state */}
       <AuthProvider>
+        {/* PermzPlus permission provider — bridges Firebase role → policy engine */}
+        <PermissionsWrapper>
         {/* Chat provider for multi-room chat functionality */}
         <ChatProvider>
           {/* Toast notification components */}
@@ -289,6 +292,7 @@ const App = () => {
             </Routes>
           </HashRouter>
         </ChatProvider>
+        </PermissionsWrapper>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

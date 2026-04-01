@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useArchaeologist } from "@/hooks/use-archaeologist";
 import { useUser } from "@/hooks/use-user";
-import { useDarkMode } from "@/hooks/use-dark-mode";
 
 // Explore items (shown in Explore submenu)
 const exploreItems = [
@@ -53,8 +52,7 @@ export const BottomNav = () => {
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const { isArchaeologist } = useArchaeologist();
-  const { isSuperAdmin, isAdmin, isMember } = useUser();
-  const { isDark, toggle: toggleDark } = useDarkMode();
+  const { isSuperAdmin, isAdmin, isMember, can } = useUser();
   const { theme, toggleTheme } = useTheme();
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isGiftShopSheetOpen, setIsGiftShopSheetOpen] = useState(false);
@@ -153,8 +151,8 @@ export const BottomNav = () => {
             <span className="text-micro font-medium leading-snug font-sans tracking-wide">Explore</span>
           </button>
 
-          {/* Center Create Button - For archaeologists, members, and admins */}
-          {isAuthenticated && (isArchaeologist || isMember || isAdmin) ? (
+          {/* Center Create Button - For archaeologists and users who can create content */}
+          {isAuthenticated && (isArchaeologist || can('content:create')) ? (
             <button
               onClick={handleCreateClick}
               className="flex items-center justify-center w-14 h-14 -mt-7 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 active:scale-95 transition-all duration-200 ring-4 ring-background"
@@ -246,8 +244,8 @@ export const BottomNav = () => {
             ) : isAuthenticated ? (
               // Account submenu
               <>
-                {/* My Assignments + Upload Form — MEMBER only */}
-                {isMember && !isAdmin && (
+                {/* My Assignments + Upload Form — users with assignment view but not org manage */}
+                {can('assignments:view-own') && !can('org:manage') && (
                   <>
                     <Button
                       variant="ghost"
@@ -293,7 +291,7 @@ export const BottomNav = () => {
                   </>
                 )}
                 {/* Admin section */}
-                {isAuthenticated && isAdmin && (
+                {isAuthenticated && can('org:manage') && (
                   <>
                     <Button
                       variant="ghost"
@@ -331,7 +329,7 @@ export const BottomNav = () => {
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    {isSuperAdmin && (
+                    {can('admin:panel') && (
                       <Button
                         variant="ghost"
                         className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
@@ -387,39 +385,18 @@ export const BottomNav = () => {
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </Button>
                 ))}
-<<<<<<< HEAD
                 {/* Dark Mode Toggle */}
-                <Button
-                  variant="ghost"
-                  className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
-                  onClick={toggleDark}
-                >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
-                    {isDark ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
-                  </div>
-                  <div className="text-left flex-1">
-                    <div className="text-body font-semibold text-foreground font-sans leading-snug">{isDark ? "Light Mode" : "Dark Mode"}</div>
-                    <div className="text-caption text-muted-foreground font-sans leading-snug">Switch appearance</div>
-=======
-                {/* Theme Toggle */}
                 <Button
                   variant="ghost"
                   className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
                   onClick={toggleTheme}
                 >
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
-                    {theme === 'dark'
-                      ? <Sun className="w-5 h-5 text-muted-foreground" />
-                      : <Moon className="w-5 h-5 text-muted-foreground" />}
+                    {theme === 'dark' ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
                   </div>
                   <div className="text-left flex-1">
-                    <div className="text-body font-semibold text-foreground font-sans leading-snug">
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </div>
-                    <div className="text-caption text-muted-foreground font-sans leading-snug">
-                      Switch appearance
-                    </div>
->>>>>>> c8f9bad (final)
+                    <div className="text-body font-semibold text-foreground font-sans leading-snug">{theme === 'dark' ? "Light Mode" : "Dark Mode"}</div>
+                    <div className="text-caption text-muted-foreground font-sans leading-snug">Switch appearance</div>
                   </div>
                 </Button>
                 {/* Logout Button */}
@@ -440,7 +417,6 @@ export const BottomNav = () => {
             ) : (
               // Non-authenticated menu
               <>
-<<<<<<< HEAD
                 <Button
                   variant="ghost"
                   className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
@@ -470,18 +446,16 @@ export const BottomNav = () => {
                 <Button
                   variant="ghost"
                   className="w-full h-auto py-3 px-4 flex items-center gap-4 hover:bg-muted/80 active:scale-[0.98] rounded-xl transition-all justify-start"
-                  onClick={toggleDark}
+                  onClick={toggleTheme}
                 >
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
-                    {isDark ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
+                    {theme === 'dark' ? <Sun className="w-5 h-5 text-muted-foreground" /> : <Moon className="w-5 h-5 text-muted-foreground" />}
                   </div>
                   <div className="text-left flex-1">
-                    <div className="text-body font-semibold text-foreground font-sans leading-snug">{isDark ? "Light Mode" : "Dark Mode"}</div>
+                    <div className="text-body font-semibold text-foreground font-sans leading-snug">{theme === 'dark' ? "Light Mode" : "Dark Mode"}</div>
                     <div className="text-caption text-muted-foreground font-sans leading-snug">Switch appearance</div>
                   </div>
                 </Button>
-=======
->>>>>>> c8f9bad (final)
                 <div className="pt-4 mt-4 border-t border-border space-y-2">
                   <Button
                     variant="ghost"
