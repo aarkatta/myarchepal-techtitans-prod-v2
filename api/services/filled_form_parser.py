@@ -7,7 +7,7 @@ needs template upfront), this service does BOTH in a single GPT-4o call:
   2. Read every filled-in value from this specific form instance
   3. Pull out any site name / site number visible in the form header
 
-PDFs are rendered to PNG images via pymupdf before sending.
+PDFs are rendered to PNG images via pypdfium2 before sending.
 Used by POST /api/parse-filled-form when no template is provided upfront.
 
 Env vars required:
@@ -25,7 +25,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-import fitz  # pymupdf
+import io
+
+import pypdfium2 as pdfium
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -43,13 +45,14 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 def _render_pdf_to_images(base64_pdf: str) -> list[str]:
     """Render each PDF page to a base64 PNG string (capped at MAX_PAGES)."""
     pdf_bytes = base64.b64decode(base64_pdf)
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    doc = pdfium.PdfDocument(pdf_bytes)
     pages: list[str] = []
-    for i, page in enumerate(doc):
-        if i >= MAX_PAGES:
-            break
-        pix = page.get_pixmap(dpi=150)
-        pages.append(base64.b64encode(pix.tobytes("png")).decode())
+    for i in range(min(len(doc), MAX_PAGES)):
+        page = doc[i]
+        bitmap = page.render(scale=150 / 72)  # 150 DPI
+        buf = io.BytesIO()
+        bitmap.to_pil().save(buf, format="PNG")
+        pages.append(base64.b64encode(buf.getvalue()).decode())
     doc.close()
     return pages
 

@@ -1,7 +1,7 @@
 """
 PDF parser pipeline — GPT-4o vision (single-step).
 
-Renders each PDF page to a PNG image using pymupdf, then sends all page
+Renders each PDF page to a PNG image using pypdfium2, then sends all page
 images to GPT-4o in one call. Returns a fully structured SiteTemplate JSON.
 
 Env vars required:
@@ -19,7 +19,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-import fitz  # pymupdf
+import io
+
+import pypdfium2 as pdfium
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -118,18 +120,19 @@ Additional rules:
 
 def parse_pdf_with_claude(base64_pdf: str) -> dict[str, Any]:
     """
-    Render each PDF page to PNG via pymupdf, then send all page images to
+    Render each PDF page to PNG via pypdfium2, then send all page images to
     GPT-4o vision. Returns a structured SiteTemplate JSON.
     """
     pdf_bytes = base64.b64decode(base64_pdf)
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    doc = pdfium.PdfDocument(pdf_bytes)
 
     content: list[dict] = []
-    for i, page in enumerate(doc):
-        if i >= MAX_PAGES:
-            break
-        pix = page.get_pixmap(dpi=150)
-        page_b64 = base64.b64encode(pix.tobytes("png")).decode()
+    for i in range(min(len(doc), MAX_PAGES)):
+        page = doc[i]
+        bitmap = page.render(scale=150 / 72)  # 150 DPI
+        buf = io.BytesIO()
+        bitmap.to_pil().save(buf, format="PNG")
+        page_b64 = base64.b64encode(buf.getvalue()).decode()
         content.append({
             "type": "image_url",
             "image_url": {"url": f"data:image/png;base64,{page_b64}", "detail": "high"},

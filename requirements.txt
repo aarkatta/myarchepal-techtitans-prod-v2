@@ -1,11 +1,11 @@
 fastapi
-uvicorn[standard]
+uvicorn
 openai
-pymupdf
+pypdfium2
+Pillow
 python-multipart
 firebase-admin
 aiosmtplib
 python-dotenv
 reportlab
-httpx
 slowapi
