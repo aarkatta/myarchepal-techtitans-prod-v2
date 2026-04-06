@@ -289,7 +289,7 @@ const ArtifactDetails = () => {
       console.error("Error updating visibility:", error);
       toast({
         title: "Error",
-        description: "Failed to update visibility. Please try again.",
+        description: "Failed to update visibility. Please try again.", // ouch
         variant: "destructive"
       });
     } finally {
@@ -302,7 +302,7 @@ const ArtifactDetails = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading artifact details...</p>
+          <p className="text-muted-foreground">Loading artifact details...</p> {/* could be cached data or fresh fetch */}
         </div>
       </div>
     );

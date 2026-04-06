@@ -100,6 +100,25 @@ const Index = () => {
     <ResponsiveLayout>
       <AppHeader />
 
+      {/* Hero Banner */}
+      <div className="relative w-full overflow-hidden" style={{ maxHeight: "420px" }}>
+        <img
+          src="/archepal_landing.png"
+          alt="Ancient archaeological site"
+          className="w-full object-cover object-top"
+          style={{ maxHeight: "420px" }}
+        />
+        {/* Gradient overlay + text */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end px-6 sm:px-10 pb-8 sm:pb-10">
+          <h1 className="text-white text-2xl sm:text-4xl font-bold leading-tight drop-shadow-lg">
+            The Future of the Past Is in Our Hands
+          </h1>
+          <p className="text-white/80 text-sm sm:text-base mt-2 max-w-xl drop-shadow">
+            Explore North Carolina's rich archaeological heritage — thousands of sites, artifacts, and stories waiting to be discovered.
+          </p>
+        </div>
+      </div>
+
       {/* Feature Cards */}
       <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">

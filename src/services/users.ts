@@ -19,6 +19,7 @@ import {
   UserStatus,
   DEFAULT_ORGANIZATION_ID,
 } from '@/types/organization';
+import { UserRoleService } from '@/services/userRoles';
 
 const COLLECTION_NAME = 'users';
 
@@ -55,6 +56,7 @@ export class UserService {
     try {
       if (!db) return null;
 
+      // Primary: query by uid field
       const usersCollection = collection(db, COLLECTION_NAME);
       const q = query(usersCollection, where('uid', '==', uid));
       const querySnapshot = await getDocs(q);
@@ -62,6 +64,12 @@ export class UserService {
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
         return { id: userDoc.id, ...userDoc.data() } as User;
+      }
+
+      // Fallback: document ID may equal the UID (e.g. manually created in Firebase console)
+      const directDoc = await getDoc(doc(db, COLLECTION_NAME, uid));
+      if (directDoc.exists()) {
+        return { id: directDoc.id, uid, ...directDoc.data() } as User;
       }
 
       return null;
@@ -220,15 +228,21 @@ export class UserService {
   /**
    * Update user role (ORG_ADMIN or SUPER_ADMIN only)
    */
-  static async updateRole(uid: string, role: UserRole): Promise<void> {
+  static async updateRole(uid: string, role: UserRole, assignedBy?: string): Promise<void> {
     try {
       if (!db) throw new Error('Firestore not initialized');
 
+      // Update legacy users/{uid}.role field
       const userDoc = doc(db, COLLECTION_NAME, uid);
       await updateDoc(userDoc, {
         role,
         updatedAt: Timestamp.now(),
       });
+
+      // Sync user_roles collection — fetch user's orgId to build the composite key
+      const user = await this.getByUid(uid);
+      const orgId = user?.organizationId ?? DEFAULT_ORGANIZATION_ID;
+      await UserRoleService.assignRole(uid, role, orgId, assignedBy);
 
       console.log('✅ User role updated:', uid, role);
     } catch (error) {

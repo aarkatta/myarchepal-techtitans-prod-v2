@@ -1,0 +1,710 @@
+{
+  "document_title": "North Carolina Cemetery Site Form",
+  "source": "Field labels inferred from the provided page images/OCR text",
+  "pages": [
+    {
+      "page": 1,
+      "section": "Identity",
+      "fields": [
+        {
+          "name": "cemetery_name",
+          "label": "Cemetery name(s)",
+          "type": "text"
+        },
+        {
+          "name": "state_site_number",
+          "label": "State site number",
+          "type": "text",
+          "observed_value": "31"
+        },
+        {
+          "name": "other_site_numbers",
+          "label": "Other site numbers",
+          "type": "text"
+        },
+        {
+          "name": "state_property_office_complex_number",
+          "label": "State Property Office complex number",
+          "type": "group",
+          "subfields": [
+            {
+              "name": "cty",
+              "label": "CTY",
+              "type": "text"
+            },
+            {
+              "name": "co",
+              "label": "CO",
+              "type": "text"
+            },
+            {
+              "name": "comp",
+              "label": "COMP",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "name": "organization_assigning_other_number",
+          "label": "Organization assigning other number",
+          "type": "text"
+        },
+        {
+          "name": "recorded_by",
+          "label": "Recorded by",
+          "type": "text"
+        },
+        {
+          "name": "organization_name",
+          "label": "Organization name (if any)",
+          "type": "text"
+        },
+        {
+          "name": "mailing_address",
+          "label": "Mailing address",
+          "type": "text"
+        },
+        {
+          "name": "phone_numbers",
+          "label": "Phone number(s)",
+          "type": "text"
+        },
+        {
+          "name": "email",
+          "label": "Email",
+          "type": "text"
+        },
+        {
+          "name": "form_submitted_by",
+          "label": "Form submitted by",
+          "type": "text"
+        },
+        {
+          "name": "date_submitted",
+          "label": "Date Submitted",
+          "type": "date"
+        },
+        {
+          "name": "reason_for_recording_cemetery",
+          "label": "Reason for recording cemetery",
+          "type": "text"
+        },
+        {
+          "name": "tracking_number",
+          "label": "Tracking number",
+          "type": "text"
+        },
+        {
+          "name": "compliance_project_name",
+          "label": "Compliance project name",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "page": 1,
+      "section": "Location and Ownership",
+      "fields": [
+        {
+          "name": "county",
+          "label": "County",
+          "type": "text"
+        },
+        {
+          "name": "city_town_community_or_township",
+          "label": "City, town, community or township",
+          "type": "text"
+        },
+        {
+          "name": "cemetery_address",
+          "label": "Cemetery address (if applicable)",
+          "type": "text"
+        },
+        {
+          "name": "directions_to_cemetery",
+          "label": "Directions to cemetery",
+          "type": "text"
+        },
+        {
+          "name": "access_to_cemetery",
+          "label": "Access to cemetery",
+          "type": "checkbox_group",
+          "options": [
+            "Restricted",
+            "Unrestricted"
+          ],
+          "additional_field": {
+            "name": "access_explain",
+            "label": "Explain",
+            "type": "text"
+          }
+        },
+        {
+          "name": "cemetery_owner_name_and_address",
+          "label": "Cemetery owner name and address",
+          "type": "text"
+        },
+        {
+          "name": "usgs_topographic_quadrangle_map_name",
+          "label": "USGS topographic quadrangle map name",
+          "type": "text"
+        },
+        {
+          "name": "coordinates",
+          "label": "Provide coordinates",
+          "type": "group",
+          "subfields": [
+            {
+              "name": "latitude",
+              "label": "Latitude",
+              "type": "coordinate",
+              "format": "degrees_minutes_seconds"
+            },
+            {
+              "name": "longitude",
+              "label": "Longitude",
+              "type": "coordinate",
+              "format": "degrees_minutes_seconds"
+            },
+            {
+              "name": "utm_datum",
+              "label": "Datum",
+              "type": "checkbox_group",
+              "options": [
+                "NAD27",
+                "NAD83"
+              ]
+            },
+            {
+              "name": "utm_zone",
+              "label": "Zone",
+              "type": "text"
+            },
+            {
+              "name": "utm_easting",
+              "label": "Easting",
+              "type": "text"
+            },
+            {
+              "name": "utm_northing",
+              "label": "Northing",
+              "type": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "section": "Description",
+      "fields": [
+        {
+          "name": "public_cemetery",
+          "label": "Public cemetery",
+          "type": "checkbox"
+        },
+        {
+          "name": "private_cemetery",
+          "label": "Private cemetery",
+          "type": "group",
+          "subfields": [
+            {
+              "name": "private_family",
+              "label": "Family",
+              "type": "checkbox"
+            },
+            {
+              "name": "private_church_name_denomination",
+              "label": "Church (Name, denomination)",
+              "type": "text"
+            },
+            {
+              "name": "private_fraternal_organization_name",
+              "label": "Fraternal/Organization (Name)",
+              "type": "text"
+            },
+            {
+              "name": "private_other_explain",
+              "label": "Other (explain)",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "checkbox_group",
+          "options": [
+            "in use",
+            "maintained",
+            "neglected",
+            "abandoned"
+          ]
+        },
+        {
+          "name": "entity_name",
+          "label": "Entity Name",
+          "type": "text"
+        },
+        {
+          "name": "size_of_cemetery_approx",
+          "label": "Size of cemetery (approx)",
+          "type": "text"
+        },
+        {
+          "name": "number_of_graves_approximate",
+          "label": "Number of graves (approximate)",
+          "type": "text"
+        },
+        {
+          "name": "is_the_cemetery_enclosed",
+          "label": "Is the cemetery enclosed?",
+          "type": "checkbox_group",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "type_of_enclosure",
+          "label": "Type of enclosure",
+          "type": "checkbox_group",
+          "options": [
+            "wall",
+            "fence",
+            "hedge",
+            "other"
+          ],
+          "additional_field": {
+            "name": "type_of_enclosure_other",
+            "label": "Other",
+            "type": "text"
+          }
+        },
+        {
+          "name": "condition_of_enclosure",
+          "label": "Condition of enclosure",
+          "type": "checkbox_group",
+          "options": [
+            "Good",
+            "Poor",
+            "Other"
+          ],
+          "additional_field": {
+            "name": "condition_of_enclosure_other",
+            "label": "Other",
+            "type": "text"
+          }
+        },
+        {
+          "name": "number_of_marked_graves",
+          "label": "Number of marked graves",
+          "type": "text"
+        },
+        {
+          "name": "number_of_unmarked_graves",
+          "label": "Number of unmarked graves",
+          "type": "text"
+        },
+        {
+          "name": "number_of_legible_markers",
+          "label": "Number of legible markers",
+          "type": "text"
+        },
+        {
+          "name": "period_of_use_began",
+          "label": "Period of use began",
+          "type": "date_or_text"
+        },
+        {
+          "name": "period_of_use_ended",
+          "label": "Period of use ended",
+          "type": "date_or_text"
+        },
+        {
+          "name": "date_of_earliest_marker",
+          "label": "Date of earliest marker",
+          "type": "date_or_text"
+        },
+        {
+          "name": "date_of_most_recent_marker",
+          "label": "Date of most recent marker",
+          "type": "date_or_text"
+        },
+        {
+          "name": "marker_types",
+          "label": "Marker type(s)",
+          "type": "checkbox_group",
+          "options": [
+            "wood",
+            "limestone",
+            "granite",
+            "marble",
+            "concrete",
+            "ceramic",
+            "encased paper",
+            "other"
+          ],
+          "additional_field": {
+            "name": "marker_type_other",
+            "label": "Other",
+            "type": "text"
+          }
+        },
+        {
+          "name": "unusual_markers_description",
+          "label": "If unusual markers present, please describe",
+          "type": "text"
+        },
+        {
+          "name": "cultural_affiliation",
+          "label": "Cultural Affiliation",
+          "type": "checkbox_group",
+          "options": [
+            "Native American",
+            "African American",
+            "Euro American",
+            "Unknown",
+            "Other"
+          ],
+          "additional_field": {
+            "name": "cultural_affiliation_other",
+            "label": "Other",
+            "type": "text"
+          }
+        },
+        {
+          "name": "historic_or_prehistoric_artifacts_present",
+          "label": "Are historic or prehistoric artifacts present?",
+          "type": "checkbox_group",
+          "options": [
+            "Yes",
+            "No",
+            "Unknown"
+          ],
+          "additional_field": {
+            "name": "artifacts_describe",
+            "label": "Describe",
+            "type": "text"
+          }
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "section": "Research, Significance, and Environment",
+      "fields": [
+        {
+          "name": "documented_in_cemetery_survey",
+          "label": "Has the cemetery been documented in a cemetery survey?",
+          "type": "checkbox_group",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "publication_information_or_web_address",
+          "label": "Publication (Please provide publication information and/or Web address)",
+          "type": "text"
+        },
+        {
+          "name": "special_historical_significance",
+          "label": "Special/historical significance of cemetery",
+          "type": "text"
+        },
+        {
+          "name": "research_potential",
+          "label": "Research potential",
+          "type": "text"
+        },
+        {
+          "name": "recommendations",
+          "label": "Recommendations",
+          "type": "text"
+        },
+        {
+          "name": "other_pertinent_information",
+          "label": "Any other information pertinent to the cemetery",
+          "type": "text"
+        },
+        {
+          "name": "elevation",
+          "label": "Elevation (feet AMSL)",
+          "type": "text"
+        },
+        {
+          "name": "modern_vegetation",
+          "label": "Modern vegetation",
+          "type": "text"
+        },
+        {
+          "name": "slope_range",
+          "label": "Slope range",
+          "type": "group",
+          "subfields": [
+            {
+              "name": "slope_low_percent",
+              "label": "low %",
+              "type": "text"
+            },
+            {
+              "name": "slope_high_percent",
+              "label": "high %",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "name": "slope_face_direction",
+          "label": "Slope Face Direction",
+          "type": "text"
+        },
+        {
+          "name": "soil_type",
+          "label": "Soil type",
+          "type": "text"
+        },
+        {
+          "name": "soil_series_name",
+          "label": "Soil Series name",
+          "type": "text"
+        },
+        {
+          "name": "nrcs_soil_type_code",
+          "label": "NRCS soil type code",
+          "type": "text"
+        },
+        {
+          "name": "distance_to_water_meters",
+          "label": "Distance to water (meters)",
+          "type": "text"
+        },
+        {
+          "name": "drainage_basin",
+          "label": "Drainage basin",
+          "type": "text"
+        },
+        {
+          "name": "general_condition_of_cemetery",
+          "label": "General condition of cemetery",
+          "type": "checkbox_group",
+          "options": [
+            "Well maintained and preserved",
+            "Marginally maintained",
+            "Not maintained"
+          ]
+        },
+        {
+          "name": "nearest_water_type",
+          "label": "Nearest water type",
+          "type": "text"
+        },
+        {
+          "name": "ground_visibility",
+          "label": "Ground visibility",
+          "type": "group",
+          "subfields": [
+            {
+              "name": "ground_visibility_low_percent",
+              "label": "low %",
+              "type": "text"
+            },
+            {
+              "name": "ground_visibility_high_percent",
+              "label": "high %",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "name": "visibility_condition",
+          "label": "Visibility condition",
+          "type": "checkbox_group",
+          "options": [
+            "Overgrown, but easily identifiable",
+            "Overgrown, not identifiable",
+            "Not identifiable as burial site (known to exist by oral tradition)"
+          ]
+        },
+        {
+          "name": "visibility_explain",
+          "label": "Explain",
+          "type": "text"
+        },
+        {
+          "name": "have_markers_or_other_aspects_been_damaged",
+          "label": "Have markers or other aspects of cemetery been damaged?",
+          "type": "checkbox_group",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "damage_caused_by",
+          "label": "Damage caused by (check all that apply)",
+          "type": "checkbox_group",
+          "options": [
+            "Vandalism",
+            "Animals/grazing",
+            "Farming operations",
+            "Industrial operations",
+            "Development or construction activities",
+            "Custodial care",
+            "Natural activities",
+            "Neglect or attrition",
+            "Other means"
+          ],
+          "additional_field": {
+            "name": "damage_other_describe",
+            "label": "Other means (describe)",
+            "type": "text"
+          }
+        },
+        {
+          "name": "percent_destroyed_estimate",
+          "label": "Percent destroyed (estimate)",
+          "type": "text"
+        },
+        {
+          "name": "date_destroyed_if_known",
+          "label": "Date destroyed, if known",
+          "type": "date_or_text"
+        },
+        {
+          "name": "cemetery_currently_threatened",
+          "label": "Is cemetery currently threatened?",
+          "type": "checkbox_group",
+          "options": [
+            "Yes",
+            "No"
+          ]
+        },
+        {
+          "name": "threatened_explain",
+          "label": "Please explain",
+          "type": "text"
+        },
+        {
+          "name": "topographic_situation",
+          "label": "Topographic situation",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "page": 4,
+      "section": "Office of State Archaeology Use",
+      "fields": [
+        {
+          "name": "national_register_status",
+          "label": "National Register Status",
+          "type": "checkbox_group",
+          "options": [
+            "Determined Eligible",
+            "Placed on the Study List",
+            "Approved for Nomination by NRAC",
+            "Currently listed on NRHP",
+            "Removed from NRHP",
+            "Not eligible after evaluation",
+            "Unassessed",
+            "North Carolina Archaeological Record Program"
+          ]
+        },
+        {
+          "name": "criterion",
+          "label": "Criterion",
+          "type": "checkbox_group",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        {
+          "name": "date_listed",
+          "label": "Date listed",
+          "type": "date_or_text"
+        },
+        {
+          "name": "form_reliability",
+          "label": "Form reliability",
+          "type": "checkbox_group",
+          "options": [
+            "Complete",
+            "Incomplete",
+            "Unreliable"
+          ]
+        },
+        {
+          "name": "locational_reliability",
+          "label": "Locational reliability",
+          "type": "checkbox_group",
+          "options": [
+            "Accurate",
+            "Unknown",
+            "Unreliable",
+            "Within 100 meter radius",
+            "Within 500 meter radius",
+            "Within 1 km radius"
+          ]
+        },
+        {
+          "name": "form_checked_by",
+          "label": "Form Checked by",
+          "type": "text"
+        },
+        {
+          "name": "form_checked_date",
+          "label": "Date",
+          "type": "date_or_text"
+        }
+      ]
+    },
+    {
+      "page": 5,
+      "section": "Burial/Marker Table",
+      "type": "table",
+      "columns": [
+        {
+          "name": "name_on_marker",
+          "label": "Name(s) on marker",
+          "type": "text"
+        },
+        {
+          "name": "birth_date",
+          "label": "Birth date",
+          "type": "date_or_text"
+        },
+        {
+          "name": "death_date",
+          "label": "Death Date",
+          "type": "date_or_text"
+        },
+        {
+          "name": "marker_type",
+          "label": "Marker Type",
+          "type": "text"
+        },
+        {
+          "name": "marker_material",
+          "label": "Marker Material",
+          "type": "text"
+        },
+        {
+          "name": "condition_of_marker",
+          "label": "Condition of marker",
+          "type": "text"
+        },
+        {
+          "name": "inscription",
+          "label": "Inscription",
+          "type": "text"
+        }
+      ],
+      "row_behavior": "repeating"
+    }
+  ]
+}

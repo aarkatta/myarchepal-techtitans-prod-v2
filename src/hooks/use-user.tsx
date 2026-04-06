@@ -86,7 +86,8 @@ export const useUser = (): UseUserResult => {
   }, [fetchUserData]);
 
   // Computed properties - check both user.role (legacy) and user_roles collection
-  const isUser = user !== null && user.status === 'ACTIVE';
+  // Treat missing status as ACTIVE for backward compat (manually-created users may omit it)
+  const isUser = user !== null && (user.status === 'ACTIVE' || !user.status);
 
   // Check user_roles first, fallback to user.role for backward compatibility
   const isSuperAdmin = isUser && (
@@ -109,16 +110,26 @@ export const useUser = (): UseUserResult => {
     user?.role === 'MEMBER'
   );
 
+  // Take the highest role across both sources: user_roles collection and legacy users/{uid}.role
+  const ROLE_LEVEL: Record<UserRole, number> = { MEMBER: 1, ORG_ADMIN: 2, SUPER_ADMIN: 3 };
+  const legacyRole = (user?.role as UserRole | undefined) ?? null;
+  const effectiveRole: UserRole | null = (() => {
+    if (!highestRole && !legacyRole) return null;
+    if (!highestRole) return legacyRole;
+    if (!legacyRole) return highestRole;
+    return ROLE_LEVEL[highestRole] >= ROLE_LEVEL[legacyRole] ? highestRole : legacyRole;
+  })();
+
   const can = useCallback(
     (permission: AppPermission): boolean => {
-      if (!highestRole) return false;
+      if (!effectiveRole) return false;
       try {
-        return policy.can(highestRole, permission);
+        return policy.can(effectiveRole, permission);
       } catch {
         return false;
       }
     },
-    [highestRole],
+    [effectiveRole],
   );
 
   return {
