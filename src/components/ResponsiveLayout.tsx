@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import { SideNav } from "./SideNav";
 import { BottomNav } from "./BottomNav";
 import { Footer } from "./Footer";
-import { AccountButton } from "./AccountButton";
 import { useUser } from "@/hooks/use-user";
 import { DEFAULT_ORGANIZATION_ID } from "@/types/organization";
 import { TriangleAlert } from "lucide-react";
@@ -42,11 +41,6 @@ export const ResponsiveLayout = ({
     <div className="min-h-screen bg-background safe-top">
       {/* Side Navigation - Only visible on desktop (lg+) */}
       <SideNav />
-
-      {/* Mobile-only: Help + Account icons fixed at top-right on every page */}
-      <div className="lg:hidden fixed top-0 right-0 z-50 flex items-center pr-2 pt-2">
-        <AccountButton />
-      </div>
 
       {/* Demo / Default-Org Warning Banner */}
       {isDefaultOrg && (

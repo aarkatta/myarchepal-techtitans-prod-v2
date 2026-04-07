@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Bell, User, LogIn, LogOut, Mail, WifiOff, Building2 } from "lucide-react";
+import { Bell, User, LogIn, LogOut, Mail, WifiOff, Building2, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -128,11 +128,18 @@ export const AppHeader = () => {
             {isAuthenticated ? (
               <>
                 <button
-                  className="hidden lg:flex p-2 md:p-2.5 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
+                  className="p-2 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
+                  onClick={() => navigate("/help")}
+                  aria-label="Help"
+                >
+                  <HelpCircle className="w-5 h-5 text-muted-foreground" />
+                </button>
+                <button
+                  className="p-2 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
                   onClick={() => navigate("/account")}
                   aria-label="Account"
                 >
-                  <User className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
+                  <User className="w-5 h-5 text-muted-foreground" />
                 </button>
                 <Button
                   variant="ghost"

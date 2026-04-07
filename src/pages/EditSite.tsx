@@ -332,7 +332,7 @@ const EditSite = () => {
             </Button>
             <PageHeader showLogo={false} />
           </div>
-          <AccountButton mobileHidden />
+          <AccountButton />
         </div>
       </header>
 

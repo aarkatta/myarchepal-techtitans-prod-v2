@@ -658,7 +658,7 @@ const DigitalDiary = () => {
         <header className="bg-card p-4 border-b border-border sticky top-0 z-10 lg:static">
           <div className="flex items-center justify-between">
             <PageHeader />
-            <AccountButton mobileHidden />
+            <AccountButton />
           </div>
         </header>
         <div className="p-4 lg:p-6">
@@ -687,7 +687,7 @@ const DigitalDiary = () => {
       <header className="bg-card/95 backdrop-blur-lg px-4 py-4 sm:px-6 lg:px-8 border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <PageHeader showLogo={false} />
-          <AccountButton mobileHidden />
+          <AccountButton />
         </div>
       </header>
 

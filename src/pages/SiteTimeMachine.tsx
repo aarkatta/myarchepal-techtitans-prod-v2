@@ -210,7 +210,7 @@ const SiteTimeMachine = () => {
               </Button>
               <PageHeader showLogo={false} />
             </div>
-            <AccountButton mobileHidden />
+            <AccountButton />
           </div>
         </div>
       </header>

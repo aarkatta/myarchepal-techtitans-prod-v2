@@ -124,7 +124,7 @@ const Articles = () => {
                 Create Article
               </Button>
             )}
-            <AccountButton mobileHidden />
+            <AccountButton />
           </div>
         </div>
         <div className="relative max-w-md">

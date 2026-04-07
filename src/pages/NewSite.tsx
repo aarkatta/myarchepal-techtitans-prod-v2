@@ -201,7 +201,7 @@ export default function NewSite() {
         <header className="bg-card/95 backdrop-blur-lg px-4 py-4 border-b border-border sticky top-0 z-40">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <PageHeader showLogo={false} />
-            <AccountButton mobileHidden />
+            <AccountButton />
           </div>
         </header>
         <div className="flex items-center justify-center min-h-[60vh] p-6">
@@ -228,7 +228,7 @@ export default function NewSite() {
       <header className="bg-card/95 backdrop-blur-lg px-4 py-4 border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <PageHeader showLogo={false} />
-          <AccountButton mobileHidden />
+          <AccountButton />
         </div>
       </header>
 

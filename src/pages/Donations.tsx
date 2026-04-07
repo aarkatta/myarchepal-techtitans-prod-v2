@@ -20,7 +20,7 @@ const Donations = () => {
       <header className="bg-card/95 backdrop-blur-lg px-4 py-4 sm:px-6 lg:px-8 border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <PageHeader mobileLogoOnly />
-          <AccountButton mobileHidden />
+          <AccountButton />
         </div>
       </header>
 

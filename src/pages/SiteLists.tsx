@@ -297,7 +297,7 @@ const SiteLists = () => {
                 </Button>
               )}
               <CreateSiteModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
-              <AccountButton mobileHidden />
+              <AccountButton />
             </div>
           </div>
 
