@@ -1,0 +1,14 @@
+# Capacitor native projects — not needed for web deployment
+android/
+ios/
+
+# App store / Play Store screenshots — not served from this web app
+public/android_images/
+
+# Documentation and planning files
+docs/
+
+# Python cache
+api/__pycache__/
+api/**/__pycache__/
+**/*.pyc
