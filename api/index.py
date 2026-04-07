@@ -63,10 +63,13 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:8080",   # Vite dev (this project)
-        "http://localhost:5173",   # Vite dev (default)
-        "http://localhost:4173",   # Vite preview
-        "https://*.vercel.app",    # Vercel deployments
+        "http://localhost:8080",        # Vite dev (this project)
+        "http://localhost:5173",        # Vite dev (default)
+        "http://localhost:4173",        # Vite preview
+        "https://*.vercel.app",         # Vercel deployments
+        "capacitor://localhost",        # Capacitor iOS native
+        "https://localhost",            # Capacitor Android native (androidScheme: 'https')
+        "ionic://localhost",            # Ionic compatibility
     ],
     allow_credentials=True,
     allow_methods=["*"],

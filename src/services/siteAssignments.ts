@@ -8,6 +8,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { apiUrl } from '@/lib/api';
 import type { Site } from '@/services/sites';
 
 export class SiteAssignmentsService {
@@ -30,7 +31,7 @@ export class SiteAssignmentsService {
 
     // Fire-and-forget — notify backend to send email (Task 5.5)
     try {
-      await fetch('/api/notify-consultant', {
+      await fetch(apiUrl('/api/notify-consultant'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId, consultantId, consultantEmail }),

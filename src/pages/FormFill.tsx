@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { useNetworkStatus } from '@/hooks/use-network';
 import { FormFillContext } from '@/contexts/FormFillContext';
+import { apiUrl } from '@/lib/api';
 import { calculateReliability } from '@/lib/reliabilityScore';
 
 import type { Site } from '@/services/sites';
@@ -223,7 +224,7 @@ const FormFill = () => {
         .filter(f => !['section_header', 'divider', 'file_upload', 'repeating_group'].includes(f.fieldType))
         .map(f => ({ id: f.id, label: f.label, fieldType: f.fieldType, options: f.options ?? null }));
 
-      const res = await fetch('/api/parse-form-image', {
+      const res = await fetch(apiUrl('/api/parse-form-image'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ base64_image: base64, media_type: mediaType, fields: fieldDefs }),

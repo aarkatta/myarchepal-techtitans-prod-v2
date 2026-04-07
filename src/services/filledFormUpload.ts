@@ -1,4 +1,5 @@
 import type { TemplateSection, TemplateField } from '@/types/siteTemplates';
+import { apiUrl } from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,7 +49,7 @@ export class FilledFormUploadService {
     fileName: string,
     orgId: string,
   ): Promise<ParseFilledFormResult> {
-    const res = await fetch('/api/parse-filled-form', {
+    const res = await fetch(apiUrl('/api/parse-filled-form'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -96,7 +97,7 @@ export class FilledFormUploadService {
     siteType: string,
     idToken: string,
   ): Promise<string> {
-    const res = await fetch('/api/sites/create-from-upload', {
+    const res = await fetch(apiUrl('/api/sites/create-from-upload'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

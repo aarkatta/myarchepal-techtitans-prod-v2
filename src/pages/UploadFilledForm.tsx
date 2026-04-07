@@ -22,6 +22,7 @@ import { FilledFormUploadService, type ParseFilledFormResult } from '@/services/
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { calculateReliability } from '@/lib/reliabilityScore';
+import { apiUrl } from '@/lib/api';
 
 import type { TemplateField, TemplateSection } from '@/types/siteTemplates';
 import type { MediaAttachment } from '@/types/siteSubmissions';
@@ -175,7 +176,7 @@ const UploadFilledForm = () => {
 
         // 6. Notify admin if new template (fire-and-forget)
         if (isNewTemplate) {
-          fetch('/api/notify-admin-template-review', {
+          fetch(apiUrl('/api/notify-admin-template-review'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

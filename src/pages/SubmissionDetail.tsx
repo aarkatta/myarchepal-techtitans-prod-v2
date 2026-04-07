@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/api';
 import { Textarea } from '@/components/ui/textarea';
 
 import { SitesService } from '@/services/sites';
@@ -260,7 +261,7 @@ const SubmissionDetail = () => {
     try {
       const token = await auth?.currentUser?.getIdToken();
       const res = await fetch(
-        `/api/submissions/${siteId}/${submissionId}/export-${type}`,
+        apiUrl(`/api/submissions/${siteId}/${submissionId}/export-${type}`),
         { headers: token ? { Authorization: `Bearer ${token}` } : {} },
       );
       if (!res.ok) throw new Error(`Export failed: ${res.statusText}`);

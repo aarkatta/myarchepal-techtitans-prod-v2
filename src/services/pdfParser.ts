@@ -1,4 +1,5 @@
 import type { TemplateField, TemplateSection } from '@/types/siteTemplates';
+import { apiUrl } from '@/lib/api';
 
 export interface ParsedTemplate {
   templateName: string;
@@ -31,7 +32,7 @@ export async function parsePdfTemplate(
 ): Promise<ParsedTemplate> {
   const base64Pdf = await fileToBase64(file);
 
-  const res = await fetch('/api/parse-pdf', {
+  const res = await fetch(apiUrl('/api/parse-pdf'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
