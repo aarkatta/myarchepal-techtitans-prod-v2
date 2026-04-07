@@ -11,10 +11,10 @@ import { policy } from '@/lib/permissions';
  * is passed — all permission checks will return false until the role loads.
  */
 export const PermissionsWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { highestRole } = useUser();
+  const { effectiveRole } = useUser();
 
   return (
-    <PermissionProvider engine={policy} role={highestRole ?? ''}>
+    <PermissionProvider engine={policy} role={effectiveRole ?? ''}>
       {children}
     </PermissionProvider>
   );

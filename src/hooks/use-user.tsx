@@ -11,6 +11,8 @@ interface UseUserResult {
   organization: Organization | null;
   userRoles: UserRoleMapping[];
   highestRole: UserRole | null;
+  /** Highest role across both user_roles collection and legacy users/{uid}.role — use this for PermissionProvider */
+  effectiveRole: UserRole | null;
   loading: boolean;
   error: string | null;
   isUser: boolean;
@@ -137,6 +139,7 @@ export const useUser = (): UseUserResult => {
     organization,
     userRoles,
     highestRole,
+    effectiveRole,
     loading,
     error,
     isUser,
