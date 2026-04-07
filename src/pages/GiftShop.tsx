@@ -148,7 +148,7 @@ const GiftShop = () => {
                 </>
               )}
             </Button>
-            <AccountButton />
+            <AccountButton mobileHidden />
           </div>
         </div>
 

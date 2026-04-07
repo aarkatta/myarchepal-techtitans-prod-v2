@@ -115,7 +115,7 @@ const EventDetails = () => {
               </Button>
               <PageHeader showLogo={false} />
             </div>
-            <AccountButton />
+            <AccountButton mobileHidden />
           </div>
         </div>
       </header>

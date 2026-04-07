@@ -2,7 +2,12 @@ import { useNavigate } from "react-router-dom";
 import { User, HelpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-export const AccountButton = () => {
+interface AccountButtonProps {
+  /** Hide on mobile — use when ResponsiveLayout's top bar already renders these icons */
+  mobileHidden?: boolean;
+}
+
+export const AccountButton = ({ mobileHidden = false }: AccountButtonProps) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -11,7 +16,7 @@ export const AccountButton = () => {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className={`flex items-center gap-1 ${mobileHidden ? 'hidden lg:flex' : ''}`}>
       <button
         className="p-2 hover:bg-muted rounded-full transition-colors"
         onClick={() => navigate("/help")}

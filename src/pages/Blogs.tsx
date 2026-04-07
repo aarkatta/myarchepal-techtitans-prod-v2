@@ -89,7 +89,7 @@ const Blogs = () => {
                 Create Blog
               </Button>
             )}
-            <AccountButton />
+            <AccountButton mobileHidden />
           </div>
         </div>
         <div className="relative max-w-md">

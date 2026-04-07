@@ -680,7 +680,7 @@ const CreateArtifact = () => {
                 <span>Syncing {pendingCount}</span>
               </div>
             )}
-            <AccountButton />
+            <AccountButton mobileHidden />
           </div>
         </div>
       </header>

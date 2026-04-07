@@ -82,7 +82,7 @@ const Events = () => {
       <header className="bg-card p-4 border-b border-border sticky top-0 z-10 lg:static">
         <div className="flex items-center justify-between">
           <PageHeader />
-          <AccountButton />
+          <AccountButton mobileHidden />
         </div>
       </header>
 

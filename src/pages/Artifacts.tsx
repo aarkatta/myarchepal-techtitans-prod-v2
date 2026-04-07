@@ -179,7 +179,7 @@ const Artifacts = () => {
                   Create Artifact
                 </Button>
               )}
-              <AccountButton />
+              <AccountButton mobileHidden />
             </div>
           </div>
 

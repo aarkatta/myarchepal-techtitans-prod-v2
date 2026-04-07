@@ -183,7 +183,7 @@ const ArticleDetails = () => {
                   <Edit className="w-4 h-4" />
                 </Button>
               )}
-              <AccountButton />
+              <AccountButton mobileHidden />
             </div>
           </div>
         </div>
