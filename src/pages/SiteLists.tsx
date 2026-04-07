@@ -285,7 +285,7 @@ const SiteLists = () => {
                   <span>Cached</span>
                 </div>
               )}
-              {user && isOnline && (
+              {user && isAdmin && isOnline && (
                 <Button
                   variant="default"
                   size="sm"
@@ -529,6 +529,17 @@ const SiteLists = () => {
             )}
           </div>
       </div>
+
+      {/* Mobile FAB — visible on non-desktop screens for admins */}
+      {user && isAdmin && isOnline && (
+        <button
+          onClick={() => setCreateModalOpen(true)}
+          className="lg:hidden fixed bottom-24 right-5 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          aria-label="Create Site"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
 
       <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
         <AlertDialogContent>
