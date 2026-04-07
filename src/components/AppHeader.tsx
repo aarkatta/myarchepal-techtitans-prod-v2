@@ -128,7 +128,7 @@ export const AppHeader = () => {
             {isAuthenticated ? (
               <>
                 <button
-                  className="p-2 md:p-2.5 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
+                  className="hidden lg:flex p-2 md:p-2.5 hover:bg-muted active:scale-95 rounded-full transition-all duration-200"
                   onClick={() => navigate("/account")}
                   aria-label="Account"
                 >
