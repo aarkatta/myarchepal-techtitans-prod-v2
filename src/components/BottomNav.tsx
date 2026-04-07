@@ -138,6 +138,17 @@ export const BottomNav = () => {
             <span className="text-micro font-medium leading-snug font-sans tracking-wide">Diary</span>
           </button>
 
+          {/* Help */}
+          <button
+            onClick={() => navigate("/help")}
+            className={`flex flex-col items-center gap-0.5 p-3 min-w-[4rem] rounded-xl transition-all duration-200 active:scale-95 ${
+              isActive("/help") ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <HelpCircle className="w-6 h-6" />
+            <span className="text-micro font-medium leading-snug font-sans tracking-wide">Help</span>
+          </button>
+
           {/* Account — opens menu sheet */}
           <button
             onClick={() => setIsMenuOpen(true)}
