@@ -100,7 +100,7 @@ npm run dev:backend
 
 - `npm run ios` - Build and open iOS app
 - `npm run android` - Build and open Android app
-- `npm run cap:sync` - Sync web assets to mobile
+- `npx cap sync` - Sync web assets to mobile
 
 ## Technology Stack
 
