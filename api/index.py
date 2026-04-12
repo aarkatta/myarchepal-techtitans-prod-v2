@@ -66,9 +66,10 @@ app.add_middleware(
         "http://localhost:8080",        # Vite dev (this project)
         "http://localhost:5173",        # Vite dev (default)
         "http://localhost:4173",        # Vite preview
-        "https://*.vercel.app",         # Vercel deployments
-        "capacitor://localhost",        # Capacitor iOS native
+        "https://myarchepal.vercel.app",  # Production Vercel deployment (explicit domain)
+        "capacitor://localhost",        # Capacitor iOS native (iosScheme: 'capacitor')
         "https://localhost",            # Capacitor Android native (androidScheme: 'https')
+        "https://archepal.app",         # Capacitor Android native (hostname: 'archepal.app')
         "ionic://localhost",            # Ionic compatibility
     ],
     allow_credentials=True,
