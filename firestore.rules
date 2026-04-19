@@ -116,6 +116,12 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
 
+    // Help Collection - Public read, admin write (help videos shown on Help page)
+    match /Help/{helpId} {
+      allow read: if true;
+      allow create, update, delete: if isAnyAdmin();
+    }
+
     // Archaeologists Collection - Manage archaeologist roles (legacy)
     match /archaeologists/{userId} {
       allow read: if true;

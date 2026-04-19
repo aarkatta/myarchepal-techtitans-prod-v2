@@ -1,31 +1,31 @@
+import { useEffect, useState } from "react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
-
-const videos = [
-  {
-    id: "2jiy1DVv8mw",
-    title: "ArchePal - The future of the past is in our hands!",
-  },
-  // Add remaining 17 videos here:
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-  // { id: "YOUTUBE_ID", title: "Video Title" },
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import { HelpService, type HelpVideo } from "@/services/help";
+import { toast } from "sonner";
 
 const Help = () => {
+  const [videos, setVideos] = useState<HelpVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await HelpService.listVideos();
+        if (!cancelled) setVideos(rows);
+      } catch (err) {
+        console.error("Failed to load help videos", err);
+        if (!cancelled) toast.error("Failed to load help videos");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <ResponsiveLayout>
       <div className="px-4 sm:px-6 lg:px-8 py-6">
@@ -38,37 +38,52 @@ const Help = () => {
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Need more help? Contact us at{" "}
-              <a href="mailto:support@myarchepal.com" className="text-primary hover:underline">
-                support@myarchepal.com
+              <a href="mailto:techtitansnc@gmail.com" className="text-primary hover:underline">
+                techtitansnc@gmail.com
               </a>
             </p>
           </div>
 
-          {/* Video Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {videos.map((video) => (
-              <div
-                key={video.id}
-                className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-              >
-                {/* Responsive 16:9 embed */}
-                <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                  <iframe
-                    className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${video.id}`}
-                    title={video.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
+          {/* Video Grid — two columns */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="bg-card border border-border rounded-xl overflow-hidden">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="w-full" style={{ paddingBottom: "56.25%" }} />
                 </div>
-                <div className="px-4 py-3">
-                  <p className="text-sm font-medium text-foreground line-clamp-2">{video.title}</p>
+              ))}
+            </div>
+          ) : videos.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No help videos available yet. Check back soon.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {videos.map((video) => (
+                <div
+                  key={video.id ?? video.youtubeId}
+                  className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="text-sm font-medium text-foreground line-clamp-2">{video.title}</p>
+                  </div>
+                  {/* Responsive 16:9 embed */}
+                  <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                    <iframe
+                      className="absolute inset-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${video.youtubeId}`}
+                      title={video.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </ResponsiveLayout>
