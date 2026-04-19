@@ -998,7 +998,7 @@ const DigitalDiary = () => {
                         <img
                           src={entry.imageUrl}
                           alt="Diary entry"
-                          className="w-full h-48 object-cover rounded-lg mb-3"
+                          className="max-w-full h-auto rounded-lg mb-3"
                         />
                       )}
                       <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
@@ -1027,7 +1027,7 @@ const DigitalDiary = () => {
                   <img
                     src={imagePreview}
                     alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="max-w-full h-auto rounded-lg"
                   />
                   <Button
                     type="button"
@@ -1352,7 +1352,7 @@ const DigitalDiary = () => {
                   <img
                     src={editingEntry.imageUrl}
                     alt="Entry image"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="max-w-full h-auto rounded-lg"
                   />
                 </div>
               )}
