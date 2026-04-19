@@ -223,24 +223,27 @@ export class SitesService {
     }
   }
 
-  // Get recent sites
+  // Get recent sites (excludes soft-deleted sites)
   static async getRecentSites(limitCount: number = 10): Promise<Site[]> {
     try {
       if (!sitesCollection) {
         console.warn('Firebase is not properly initialized');
         return [];
       }
+      // Over-fetch so we can filter out soft-deleted sites client-side and
+      // still return up to limitCount. Firestore can't reliably filter
+      // `deletedAt == null` because existing docs don't have the field.
       const q = query(
         sitesCollection,
         orderBy('createdAt', 'desc'),
-        limit(limitCount)
+        limit(limitCount + 20)
       );
 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Site));
+      return querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Site))
+        .filter(site => !site.deletedAt)
+        .slice(0, limitCount);
     } catch (error) {
       console.error('Error fetching recent sites:', error);
       throw error;

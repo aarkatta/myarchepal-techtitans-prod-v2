@@ -31,11 +31,13 @@ export const ActiveProject = () => {
   // - Pro/Enterprise org users: See content belonging to their organization
   // - Default/Free org users: See ONLY their own content (createdBy)
   // - Non-signed-in users: See ONLY public content from Pro/Enterprise orgs (not default org)
+  // Soft-deleted sites (deletedAt set) are excluded for all audiences.
+  const visibleSites = allSites.filter(site => !site.deletedAt);
   const sites = user
     ? isProOrg
-      ? allSites.filter(site => site.organizationId === organization?.id)
-      : allSites.filter(site => site.createdBy === user.uid) // Default org users see only their own
-    : allSites.filter(site =>
+      ? visibleSites.filter(site => site.organizationId === organization?.id)
+      : visibleSites.filter(site => site.createdBy === user.uid) // Default org users see only their own
+    : visibleSites.filter(site =>
         site.visibility === 'public' &&
         site.organizationId &&
         site.organizationId !== DEFAULT_ORGANIZATION_ID
