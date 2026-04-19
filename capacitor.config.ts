@@ -7,14 +7,20 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'capacitor',
-    // Allow all hosts for Firebase connectivity
+    hostname: 'archepal.app',
+    // Load from local built assets (dist/) — never from a development server
+    // To enable live reload in development, set CAP_SERVER_URL env var explicitly:
+    // export CAP_SERVER_URL=http://<YOUR_IP>:8080 && npm run ios
+    url: process.env.CAP_SERVER_URL,
+    // Allow all hosts for Firebase connectivity + Vercel API backend
     allowNavigation: [
       'firestore.googleapis.com',
       'firebase.googleapis.com',
       'firebaseio.com',
       '*.firebaseio.com',
       '*.googleapis.com',
-      '*.google.com'
+      '*.google.com',
+      'myarchepal.vercel.app',     // Allow API calls to Vercel backend
     ]
   },
   plugins: {
