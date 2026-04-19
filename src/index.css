@@ -641,6 +641,17 @@ All colors MUST be HSL.
   }
 }
 
+/* Demo org banner — sticky offset for page-level sticky headers
+   so they stack below the banner instead of hiding behind it.
+   --banner-height is set dynamically by FreeOrgBanner (0px when hidden). */
+:root {
+  --banner-height: 0px;
+}
+
+header.sticky.top-0 {
+  top: var(--banner-height, 0px);
+}
+
 /* Demo org banner fly-in animation */
 @keyframes flyInFromTop {
   0%   { transform: translateY(-100%); opacity: 0; }

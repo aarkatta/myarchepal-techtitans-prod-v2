@@ -4,6 +4,12 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  future: {
+    // Only apply `hover:` utilities on devices that truly support hover
+    // (mouse/trackpad). Prevents iOS "tap-once-to-hover, tap-again-to-click"
+    // double-tap behaviour on cards/buttons that have hover styles.
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     container: {
       center: true,

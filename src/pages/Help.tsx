@@ -3,10 +3,23 @@ import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HelpService, type HelpVideo } from "@/services/help";
 import { toast } from "sonner";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { Play } from "lucide-react";
 
 const Help = () => {
   const [videos, setVideos] = useState<HelpVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const isNative = Capacitor.isNativePlatform();
+
+  const openOnYouTube = async (youtubeId: string) => {
+    const url = `https://www.youtube.com/watch?v=${youtubeId}`;
+    if (isNative) {
+      await Browser.open({ url });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -68,17 +81,40 @@ const Help = () => {
                   <div className="px-4 py-3 border-b border-border">
                     <p className="text-sm font-medium text-foreground line-clamp-2">{video.title}</p>
                   </div>
-                  {/* Responsive 16:9 embed */}
+                  {/* Responsive 16:9 area */}
                   <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-                    <iframe
-                      className="absolute inset-0 w-full h-full"
-                      src={`https://www.youtube.com/embed/${video.youtubeId}`}
-                      title={video.title}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      allowFullScreen
-                    />
+                    {isNative ? (
+                      <button
+                        type="button"
+                        onClick={() => openOnYouTube(video.youtubeId)}
+                        aria-label={`Play ${video.title} on YouTube`}
+                        className="absolute inset-0 w-full h-full group"
+                      >
+                        <img
+                          src={`https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg`}
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = `https://i.ytimg.com/vi/${video.youtubeId}/mqdefault.jpg`;
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-600 shadow-lg">
+                            <Play className="w-8 h-8 text-white fill-white ml-1" />
+                          </div>
+                        </div>
+                      </button>
+                    ) : (
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?playsinline=1&rel=0`}
+                        title={video.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="no-referrer"
+                        allowFullScreen
+                      />
+                    )}
                   </div>
                 </div>
               ))}
