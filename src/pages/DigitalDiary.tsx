@@ -13,12 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc, Timestamp, updateDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, Timestamp, updateDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { AzureOpenAIService } from "@/services/azure-openai";
+import { SitesService, type Site } from "@/services/sites";
+import { SiteTemplatesService } from "@/services/siteTemplates";
+import { useUser } from "@/hooks/use-user";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +43,7 @@ interface DiaryEntry {
   createdAt: Timestamp;
   date: string;
   time: string;
+  siteId?: string;
   // Offline-specific fields
   isOffline?: boolean;
   status?: 'pending';
@@ -49,6 +54,7 @@ const DigitalDiary = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { organization } = useUser();
   const { isOnline, isSyncing, syncOfflineDiaryData } = useDiarySync();
   const { hideKeyboard } = useKeyboard();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +83,8 @@ const DigitalDiary = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DiaryEntry | OfflineDiaryEntry | null>(null);
   const [editingOfflineId, setEditingOfflineId] = useState<number | null>(null);
+  const [linkedSite, setLinkedSite] = useState<Site | null>(null);
+  const [loadingLinkedSite, setLoadingLinkedSite] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [speechTargetMode, setSpeechTargetMode] = useState<"create" | "edit">("create");
   const speechTargetModeRef = useRef<"create" | "edit">("create");
@@ -93,11 +101,73 @@ const DigitalDiary = () => {
     category: "artifact" as "site" | "artifact" | "other",
   });
 
+  const [siteMode, setSiteMode] = useState<"new" | "existing">("new");
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [existingSites, setExistingSites] = useState<Site[]>([]);
+  const [loadingExistingSites, setLoadingExistingSites] = useState(false);
+
   const [editFormData, setEditFormData] = useState({
     title: "",
     content: "",
     category: "artifact" as "site" | "artifact" | "other",
   });
+
+  // Load the organization's existing sites whenever the create dialog opens
+  // with category=site, so the user can pick one instead of creating a new one
+  useEffect(() => {
+    if (!isCreateDialogOpen || formData.category !== "site" || !isOnline) return;
+
+    let cancelled = false;
+    setLoadingExistingSites(true);
+
+    const loader = organization?.id
+      ? SitesService.getSitesByOrganization(organization.id)
+      : SitesService.getAllSites();
+
+    loader
+      .then(sites => {
+        if (cancelled) return;
+        const usable = sites.filter(s => s.status !== "archived" && !s.deletedAt);
+        usable.sort((a, b) => a.name.localeCompare(b.name));
+        setExistingSites(usable);
+      })
+      .catch(err => {
+        console.warn("Could not load sites:", err);
+        if (!cancelled) setExistingSites([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingExistingSites(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isCreateDialogOpen, formData.category, isOnline, organization?.id]);
+
+  // Fetch linked site when the edit dialog opens for a site-linked entry
+  useEffect(() => {
+    if (!isEditDialogOpen || !editingEntry) {
+      setLinkedSite(null);
+      return;
+    }
+    const siteId = 'siteId' in editingEntry ? editingEntry.siteId : undefined;
+    if (!siteId) {
+      setLinkedSite(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingLinkedSite(true);
+    SitesService.getSiteById(siteId)
+      .then(site => {
+        if (!cancelled) setLinkedSite(site);
+      })
+      .catch(err => {
+        console.warn('Could not load linked site:', err);
+        if (!cancelled) setLinkedSite(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLinkedSite(false);
+      });
+    return () => { cancelled = true; };
+  }, [isEditDialogOpen, editingEntry]);
 
   // Fetch diary entries (both online and offline)
   useEffect(() => {
@@ -372,6 +442,33 @@ const DigitalDiary = () => {
       return;
     }
 
+    if (formData.category === "site" && siteMode === "new" && !formData.title.trim()) {
+      toast({
+        title: "Site Name Required",
+        description: "Please enter a site name to create a new site",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.category === "site" && siteMode === "existing" && !selectedSiteId) {
+      toast({
+        title: "Site Required",
+        description: "Please pick an existing site or switch to 'Create New Site'",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (formData.category === "site" && !isOnline) {
+      toast({
+        title: "Connection Required",
+        description: "Linking a site requires an internet connection. Please reconnect and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -416,6 +513,8 @@ const DigitalDiary = () => {
         setImagePreview(null);
         setAiSummary("");
         setAnalyzingImage(false);
+        setSiteMode("new");
+        setSelectedSiteId("");
         setIsCreateDialogOpen(false);
 
         // Refresh entries to show the new offline entry
@@ -445,14 +544,8 @@ const DigitalDiary = () => {
           await uploadBytes(imageRef, selectedImage);
           const imageUrl = await getDownloadURL(imageRef);
 
-          // Update the entry with image URL (we'll need to update the document)
-          await addDoc(collection(db, "DigitalDiary"), {
-            ...entryData,
-            imageUrl
-          });
-
-          // Delete the old entry without image
-          await deleteDoc(doc(db, "DigitalDiary", docRef.id));
+          // Update the entry with image URL
+          await updateDoc(doc(db, "DigitalDiary", docRef.id), { imageUrl });
         } catch (imageError) {
           console.error("Error uploading image:", imageError);
           toast({
@@ -463,10 +556,84 @@ const DigitalDiary = () => {
         }
       }
 
-      toast({
-        title: "Success!",
-        description: "Diary entry has been created",
-      });
+      // If category is "site", either create a new Site or link to an existing one
+      if (formData.category === "site") {
+        try {
+          let siteId: string;
+          let createdNew = false;
+          let usedDefaultTemplate = false;
+          let siteDisplayName = formData.title.trim();
+
+          if (siteMode === "existing" && selectedSiteId) {
+            siteId = selectedSiteId;
+            const picked = existingSites.find(s => s.id === selectedSiteId);
+            if (picked?.name) siteDisplayName = picked.name;
+          } else {
+            const systemTemplates = await SiteTemplatesService.listSystemTemplates();
+            const defaultTemplate = systemTemplates[0];
+            usedDefaultTemplate = !!defaultTemplate;
+
+            siteId = await SitesService.createSite({
+              name: formData.title.trim(),
+              description: formData.content.trim(),
+              status: 'draft',
+              location: { latitude: 0, longitude: 0 },
+              dateDiscovered: new Date(),
+              createdBy: user.uid,
+              organizationId: organization?.id,
+              visibility: 'private',
+              artifacts: [],
+              images: [],
+              ...(defaultTemplate ? {
+                linkedTemplateId: defaultTemplate.id,
+                assignedConsultantId: user.uid,
+                assignedConsultantEmail: user.email ?? '',
+                submissionStatus: 'in_progress' as const,
+              } : {}),
+            });
+            createdNew = true;
+
+            if (selectedImage) {
+              try {
+                const url = await SitesService.uploadSiteImage(siteId, selectedImage);
+                await SitesService.updateSiteImages(siteId, [url]);
+              } catch (imgErr) {
+                console.warn('Site image upload failed:', imgErr);
+              }
+            }
+          }
+
+          // Link the diary entry to the site (new or existing)
+          try {
+            await updateDoc(doc(db, "DigitalDiary", docRef.id), { siteId });
+          } catch (linkErr) {
+            console.warn('Could not link diary entry to site:', linkErr);
+          }
+
+          toast({
+            title: createdNew ? "Site Created!" : "Linked to Site",
+            description: createdNew
+              ? usedDefaultTemplate
+                ? `"${siteDisplayName}" added to Sites with default form template.`
+                : `"${siteDisplayName}" added to Sites.`
+              : `Diary entry linked to "${siteDisplayName}".`,
+          });
+        } catch (siteError) {
+          console.error('Error handling site for diary entry:', siteError);
+          toast({
+            title: "Partial Success",
+            description: siteMode === "existing"
+              ? "Diary entry saved, but linking to the site failed."
+              : "Diary entry saved, but site creation failed. You can create the site manually.",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Success!",
+          description: "Diary entry has been created",
+        });
+      }
 
       // Reset form
       setFormData({ title: "", content: "", category: "artifact" });
@@ -474,6 +641,8 @@ const DigitalDiary = () => {
       setImagePreview(null);
       setAiSummary("");
       setAnalyzingImage(false);
+      setSiteMode("new");
+      setSelectedSiteId("");
       setIsCreateDialogOpen(false);
 
       // Refresh entries
@@ -917,9 +1086,13 @@ const DigitalDiary = () => {
                 <Label>Entry Type</Label>
                 <RadioGroup
                   value={formData.category}
-                  onValueChange={(value: "site" | "artifact" | "other") =>
-                    setFormData({ ...formData, category: value })
-                  }
+                  onValueChange={(value: "site" | "artifact" | "other") => {
+                    // Defer setState so Radix's internal flushSync in RovingFocusGroup
+                    // doesn't collide with our render. Avoids a dev-only React warning.
+                    queueMicrotask(() =>
+                      setFormData((prev) => ({ ...prev, category: value })),
+                    );
+                  }}
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">
@@ -946,16 +1119,105 @@ const DigitalDiary = () => {
                 </RadioGroup>
               </div>
 
+              {/* Site link mode: pick existing or create new */}
+              {formData.category === "site" && (
+                <div className="space-y-2">
+                  <Label>Site</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={siteMode === "new" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setSiteMode("new");
+                        setSelectedSiteId("");
+                      }}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create New Site
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={siteMode === "existing" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSiteMode("existing")}
+                      className="w-full"
+                    >
+                      <MapPin className="w-4 h-4 mr-1" />
+                      Use Existing Site
+                    </Button>
+                  </div>
+
+                  {siteMode === "existing" && (
+                    <div className="space-y-1">
+                      <Select
+                        value={selectedSiteId || undefined}
+                        onValueChange={(v) => {
+                          setSelectedSiteId(v);
+                          // Pre-fill title with picked site name if user hasn't typed one
+                          const picked = existingSites.find(s => s.id === v);
+                          if (picked && !formData.title.trim()) {
+                            setFormData(prev => ({ ...prev, title: picked.name }));
+                          }
+                        }}
+                        disabled={loadingExistingSites || existingSites.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              loadingExistingSites
+                                ? "Loading sites…"
+                                : existingSites.length === 0
+                                ? "No sites available"
+                                : "Pick a site…"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {existingSites.map(s => (
+                            <SelectItem key={s.id} value={s.id!}>
+                              {s.name}{s.siteType ? ` — ${s.siteType}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!loadingExistingSites && existingSites.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No sites yet — switch to "Create New Site" to add one.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Title */}
               <div className="space-y-2">
-                <Label htmlFor="title">Title (optional)</Label>
+                <Label htmlFor="title">
+                  {formData.category === "site" && siteMode === "new" ? (
+                    <>Site Name <span className="text-destructive">*</span></>
+                  ) : (
+                    <>Title (optional)</>
+                  )}
+                </Label>
                 <Input
                   id="title"
-                  placeholder="Give your entry a title..."
+                  placeholder={
+                    formData.category === "site" && siteMode === "new"
+                      ? "e.g. Crowders Mountain Rockshelter"
+                      : "Give your entry a title..."
+                  }
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="border-border"
+                  required={formData.category === "site" && siteMode === "new"}
                 />
+                {formData.category === "site" && siteMode === "new" && (
+                  <p className="text-xs text-muted-foreground">
+                    A new site will be created and added to your Sites list with the default form template.
+                  </p>
+                )}
               </div>
 
               {/* Content with Speech-to-Text */}
@@ -1042,6 +1304,48 @@ const DigitalDiary = () => {
             </DialogHeader>
 
             <form onSubmit={handleUpdateEntry} className="space-y-4">
+              {/* Linked Site (when diary entry was created with category=site) */}
+              {(loadingLinkedSite || linkedSite) && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">
+                        <MapPin className="w-3 h-3" />
+                        Linked Site
+                      </div>
+                      {loadingLinkedSite ? (
+                        <p className="text-sm text-muted-foreground">Loading site…</p>
+                      ) : linkedSite ? (
+                        <>
+                          <p className="text-sm font-medium truncate">{linkedSite.name}</p>
+                          {linkedSite.siteType && (
+                            <p className="text-xs text-muted-foreground truncate">{linkedSite.siteType}</p>
+                          )}
+                          {linkedSite.submissionStatus && (
+                            <p className="text-xs text-muted-foreground capitalize">
+                              Status: {linkedSite.submissionStatus.replace(/_/g, ' ')}
+                            </p>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
+                    {linkedSite?.id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditDialogOpen(false);
+                          navigate(`/site/${linkedSite.id}`);
+                        }}
+                      >
+                        View Site
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Show existing image if available */}
               {editingEntry?.imageUrl && (
                 <div className="relative">
@@ -1058,9 +1362,11 @@ const DigitalDiary = () => {
                 <Label>Entry Type</Label>
                 <RadioGroup
                   value={editFormData.category}
-                  onValueChange={(value: "site" | "artifact" | "other") =>
-                    setEditFormData({ ...editFormData, category: value })
-                  }
+                  onValueChange={(value: "site" | "artifact" | "other") => {
+                    queueMicrotask(() =>
+                      setEditFormData((prev) => ({ ...prev, category: value })),
+                    );
+                  }}
                   className="flex gap-4"
                 >
                   <div className="flex items-center space-x-2">

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArchePal — Demo Org Banner Mockup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .device-frame { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen p-8">
+
+<div class="max-w-7xl mx-auto space-y-12">
+
+  <!-- Header -->
+  <header class="text-center">
+    <h1 class="text-2xl font-bold text-slate-900">Demo Organization Banner — Mockup</h1>
+    <p class="text-slate-600 mt-1">ArchePal · Top-of-page notice for users in the shared demo org</p>
+  </header>
+
+  <!-- ============================================ -->
+  <!-- DESKTOP MOCKUP -->
+  <!-- ============================================ -->
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Desktop view</h2>
+    <div class="device-frame bg-white rounded-lg overflow-hidden border border-slate-200">
+
+      <!-- Browser chrome -->
+      <div class="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+        <div class="flex gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-red-400"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400"></span>
+        </div>
+        <div class="flex-1 text-center">
+          <span class="inline-block bg-white border border-slate-200 rounded px-3 py-1 text-xs text-slate-500">archepal.app/#/sites</span>
+        </div>
+      </div>
+
+      <!-- THE BANNER -->
+      <div class="w-full bg-amber-50 border-b border-amber-200 text-amber-900">
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
+          <!-- Info icon -->
+          <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 16v-4M12 8h.01"></path>
+          </svg>
+          <p class="flex-1 leading-snug">
+            <span class="font-semibold">You're in Demo Organization</span>
+            <span> — a shared sandbox for exploring ArchePal.</span>
+            Ready to manage your own archaeology data privately and securely?
+            <a href="mailto:techtitansnc@gmail.com" class="font-medium underline underline-offset-2 hover:text-amber-950">Contact us</a>
+            to set up your organization.
+          </p>
+          <button aria-label="Dismiss" class="flex-shrink-0 p-1 rounded hover:bg-amber-100 transition">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- App header -->
+      <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded flex items-center justify-center text-white font-bold text-sm">A</div>
+            <span class="font-bold text-slate-900">ArchePal</span>
+          </div>
+          <nav class="flex gap-5 text-sm text-slate-600">
+            <span class="text-slate-900 font-medium border-b-2 border-amber-500 pb-3">Sites</span>
+            <span>Templates</span>
+            <span>Artifacts</span>
+            <span>Articles</span>
+            <span>Events</span>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-xs text-slate-500">Demo Organization</div>
+          <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-700">RK</div>
+        </div>
+      </div>
+
+      <!-- Page content (faded preview) -->
+      <div class="p-6 bg-slate-50 min-h-[320px]">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-slate-900">Archaeological Sites</h3>
+          <button class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-medium">+ New Site</button>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded">Pending</span>
+          </div>
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-2/3"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">In Progress</span>
+          </div>
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">Submitted</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- MOBILE MOCKUP -->
+  <!-- ============================================ -->
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Mobile view (compact copy)</h2>
+    <div class="flex justify-center">
+      <div class="device-frame bg-white rounded-3xl overflow-hidden border-8 border-slate-900 w-[380px]">
+
+        <!-- Status bar -->
+        <div class="bg-slate-900 text-white text-xs px-6 py-1.5 flex justify-between">
+          <span>9:41</span>
+          <span>●●● ●●</span>
+        </div>
+
+        <!-- THE BANNER (mobile — shorter copy) -->
+        <div class="w-full bg-amber-50 border-b border-amber-200 text-amber-900">
+          <div class="px-3 py-2 flex items-start gap-2 text-xs">
+            <svg class="h-3.5 w-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            <p class="flex-1 leading-snug">
+              <span class="font-semibold">You're in Demo Organization.</span>
+              Ready for your own private, secure org?
+              <a href="mailto:techtitansnc@gmail.com" class="font-medium underline">Contact us</a>.
+            </p>
+            <button aria-label="Dismiss" class="flex-shrink-0 -mt-0.5">
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- App header -->
+        <div class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 bg-gradient-to-br from-amber-600 to-orange-700 rounded flex items-center justify-center text-white font-bold text-xs">A</div>
+            <span class="font-bold text-slate-900 text-sm">ArchePal</span>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-700">RK</div>
+        </div>
+
+        <!-- Page content -->
+        <div class="p-3 bg-slate-50 min-h-[400px]">
+          <h3 class="font-bold text-slate-900 mb-3">Sites</h3>
+          <div class="space-y-2">
+            <div class="bg-white rounded-lg border border-slate-200 p-3">
+              <div class="h-16 bg-slate-100 rounded mb-2"></div>
+              <div class="h-2 bg-slate-200 rounded w-3/4 mb-1"></div>
+              <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            </div>
+            <div class="bg-white rounded-lg border border-slate-200 p-3">
+              <div class="h-16 bg-slate-100 rounded mb-2"></div>
+              <div class="h-2 bg-slate-200 rounded w-2/3 mb-1"></div>
+              <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom nav -->
+        <div class="bg-white border-t border-slate-200 px-4 py-2 flex justify-around">
+          <div class="text-center"><div class="w-5 h-5 bg-amber-500 rounded mx-auto mb-1"></div><span class="text-[10px] text-amber-600">Sites</span></div>
+          <div class="text-center"><div class="w-5 h-5 bg-slate-300 rounded mx-auto mb-1"></div><span class="text-[10px] text-slate-500">Articles</span></div>
+          <div class="text-center"><div class="w-5 h-5 bg-slate-300 rounded mx-auto mb-1"></div><span class="text-[10px] text-slate-500">Events</span></div>
+          <div class="text-center"><div class="w-5 h-5 bg-slate-300 rounded mx-auto mb-1"></div><span class="text-[10px] text-slate-500">More</span></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- ALTERNATIVE STYLES -->
+  <!-- ============================================ -->
+  <section>
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Alternative styles</h2>
+
+    <div class="space-y-4">
+
+      <!-- Variant A: Recommended (amber, full) -->
+      <div>
+        <p class="text-xs font-medium text-slate-600 mb-1">A — Recommended (amber, informational)</p>
+        <div class="device-frame bg-white rounded-lg overflow-hidden border border-slate-200">
+          <div class="w-full bg-amber-50 border-b border-amber-200 text-amber-900">
+            <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
+              <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+              <p class="flex-1 leading-snug"><span class="font-semibold">You're in Demo Organization</span> — a shared sandbox for exploring ArchePal. Ready to manage your own archaeology data privately and securely? <a href="mailto:techtitansnc@gmail.com" class="font-medium underline">Contact us</a> to set up your organization.</p>
+              <button class="flex-shrink-0 p-1 rounded hover:bg-amber-100"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variant B: Brand color, button CTA -->
+      <div>
+        <p class="text-xs font-medium text-slate-600 mb-1">B — Branded, button CTA (more prominent)</p>
+        <div class="device-frame bg-white rounded-lg overflow-hidden border border-slate-200">
+          <div class="w-full bg-gradient-to-r from-amber-700 to-orange-800 text-white">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4 text-sm">
+              <div class="flex-1">
+                <span class="font-semibold">Demo Organization</span>
+                <span class="text-amber-100"> · You're exploring a shared sandbox. Set up your own private org with secure data storage.</span>
+              </div>
+              <a href="mailto:techtitansnc@gmail.com" class="bg-white text-amber-800 px-3 py-1.5 rounded text-xs font-semibold hover:bg-amber-50">Contact us →</a>
+              <button class="flex-shrink-0 p-1 rounded hover:bg-white/10"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variant C: Minimal slate -->
+      <div>
+        <p class="text-xs font-medium text-slate-600 mb-1">C — Minimal (low-key, slate)</p>
+        <div class="device-frame bg-white rounded-lg overflow-hidden border border-slate-200">
+          <div class="w-full bg-slate-900 text-slate-200">
+            <div class="max-w-7xl mx-auto px-4 py-2 flex items-center gap-3 text-xs">
+              <span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider">Demo</span>
+              <p class="flex-1">Want your own private ArchePal organization? <a href="mailto:techtitansnc@gmail.com" class="text-amber-300 underline hover:text-amber-200">techtitansnc@gmail.com</a></p>
+              <button class="flex-shrink-0 hover:text-white"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- ANATOMY -->
+  <!-- ============================================ -->
+  <section class="bg-white rounded-lg border border-slate-200 p-6">
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Anatomy & rationale</h2>
+    <div class="grid grid-cols-2 gap-6 text-sm text-slate-700">
+      <div>
+        <p class="font-semibold text-slate-900 mb-2">Why amber, not red or blue?</p>
+        <p class="leading-relaxed">Amber matches your existing "pending" / "Template Reviews" accent. Red implies error; blue implies neutral info. Amber says "heads up — there's an opportunity here."</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-900 mb-2">Why a top banner, not a toast?</p>
+        <p class="leading-relaxed">Toasts dismiss themselves. This message needs to stay visible across pages until the user acts. A persistent top banner is the right pattern for environment-level context.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-900 mb-2">Why dismissible per session?</p>
+        <p class="leading-relaxed">Repeat users who've seen it 20 times will appreciate hiding it during a working session, but it returns on next login so the path to a private org stays visible.</p>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-900 mb-2">Why "Contact us" not the raw email?</p>
+        <p class="leading-relaxed">Verb-led link copy is more inviting and accessible. The mailto link can pre-fill a subject line so inbound leads are tagged automatically.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

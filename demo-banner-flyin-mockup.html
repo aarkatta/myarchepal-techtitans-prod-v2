@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ArchePal — Demo Org Banner (Fly-In)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .device-frame { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+
+  /* ---------- Fly-in animation ---------- */
+  @keyframes flyInFromTop {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    60% {
+      transform: translateY(8%);
+      opacity: 1;
+    }
+    80% {
+      transform: translateY(-4%);
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeInContent {
+    0%, 50% { opacity: 0; transform: translateX(-8px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes pulseIcon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+
+  .banner-flyin {
+    animation: flyInFromTop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .banner-flyin .banner-text,
+  .banner-flyin .banner-cta {
+    animation: fadeInContent 0.6s ease-out 0.5s both;
+  }
+
+  .banner-flyin .banner-icon {
+    animation: pulseIcon 0.6s ease-in-out 0.85s 2;
+  }
+
+  /* Replay button hover */
+  .replay-btn:active { transform: scale(0.96); }
+
+  /* Subtle shimmer on the link */
+  @keyframes linkShimmer {
+    0%, 100% { background-position: -200% 0; }
+    50% { background-position: 200% 0; }
+  }
+  .banner-link {
+    background-image: linear-gradient(90deg, transparent 0%, rgba(146, 64, 14, 0.15) 50%, transparent 100%);
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: linkShimmer 3s ease-in-out 1.5s infinite;
+  }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen p-8">
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Header with replay button -->
+  <header class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Demo Organization Banner — Fly-In Animation</h1>
+      <p class="text-slate-600 mt-1 text-sm">Variant A · Drops in from the top with a soft bounce settle</p>
+    </div>
+    <button
+      onclick="replayAnimation()"
+      class="replay-btn bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition flex items-center gap-2 shadow-sm"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+        <path d="M3 3v5h5"></path>
+      </svg>
+      Replay animation
+    </button>
+  </header>
+
+  <!-- ============================================ -->
+  <!-- DESKTOP MOCKUP -->
+  <!-- ============================================ -->
+  <section>
+    <div class="device-frame bg-white rounded-lg overflow-hidden border border-slate-200">
+
+      <!-- Browser chrome -->
+      <div class="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+        <div class="flex gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-red-400"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400"></span>
+        </div>
+        <div class="flex-1 text-center">
+          <span class="inline-block bg-white border border-slate-200 rounded px-3 py-1 text-xs text-slate-500">archepal.app/#/sites</span>
+        </div>
+      </div>
+
+      <!-- Container that clips the banner during fly-in -->
+      <div class="overflow-hidden">
+        <!-- THE ANIMATED BANNER -->
+        <div id="banner" class="banner-flyin w-full bg-amber-50 border-b border-amber-200 text-amber-900">
+          <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
+            <!-- Info icon -->
+            <svg class="banner-icon h-4 w-4 flex-shrink-0 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            <p class="banner-text flex-1 leading-snug">
+              <span class="font-semibold">You're in Demo Organization</span>
+              <span> — a shared sandbox for exploring ArchePal.</span>
+              Ready to manage your own archaeology data privately and securely?
+              <a
+                href="mailto:techtitansnc@gmail.com?subject=ArchePal%20private%20organization%20setup"
+                class="banner-link font-medium underline underline-offset-2 hover:text-amber-950"
+              >Contact us</a>
+              to set up your organization.
+            </p>
+            <button
+              onclick="dismissBanner()"
+              aria-label="Dismiss demo notice"
+              class="banner-cta flex-shrink-0 p-1 rounded hover:bg-amber-100 transition"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- App header -->
+      <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-700 rounded flex items-center justify-center text-white font-bold text-sm">A</div>
+            <span class="font-bold text-slate-900">ArchePal</span>
+          </div>
+          <nav class="flex gap-5 text-sm text-slate-600">
+            <span class="text-slate-900 font-medium border-b-2 border-amber-500 pb-3">Sites</span>
+            <span>Templates</span>
+            <span>Artifacts</span>
+            <span>Articles</span>
+            <span>Events</span>
+          </nav>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-xs text-slate-500">Demo Organization</div>
+          <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-700">RK</div>
+        </div>
+      </div>
+
+      <!-- Page content -->
+      <div class="p-6 bg-slate-50 min-h-[360px]">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-slate-900">Archaeological Sites</h3>
+          <button class="bg-amber-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-amber-700">+ New Site</button>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded">Pending</span>
+          </div>
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-2/3"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">In Progress</span>
+          </div>
+          <div class="bg-white rounded-lg border border-slate-200 p-4 space-y-2">
+            <div class="h-24 bg-slate-100 rounded"></div>
+            <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+            <div class="h-2 bg-slate-100 rounded w-1/2"></div>
+            <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">Submitted</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Animation timeline -->
+  <section class="bg-white rounded-lg border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Animation timeline</h2>
+    <div class="space-y-2 text-sm text-slate-700">
+      <div class="flex gap-3"><span class="font-mono text-xs text-slate-500 w-24 flex-shrink-0">0.00s – 0.85s</span><span><span class="font-semibold text-slate-900">Banner drops in</span> from above the viewport with a soft bounce settle <span class="text-slate-500">(cubic-bezier overshoot)</span></span></div>
+      <div class="flex gap-3"><span class="font-mono text-xs text-slate-500 w-24 flex-shrink-0">0.50s – 1.10s</span><span><span class="font-semibold text-slate-900">Text fades in</span> with a small left-to-right slide so the message reads naturally as it appears</span></div>
+      <div class="flex gap-3"><span class="font-mono text-xs text-slate-500 w-24 flex-shrink-0">0.85s – 2.05s</span><span><span class="font-semibold text-slate-900">Info icon pulses</span> twice to draw the eye without being annoying</span></div>
+      <div class="flex gap-3"><span class="font-mono text-xs text-slate-500 w-24 flex-shrink-0">1.50s onward</span><span><span class="font-semibold text-slate-900">"Contact us" link shimmers</span> subtly every 3s — a quiet reminder of the CTA</span></div>
+    </div>
+  </section>
+
+  <!-- Implementation snippet -->
+  <section class="bg-slate-900 text-slate-100 rounded-lg p-5 text-xs overflow-x-auto">
+    <p class="text-slate-400 mb-2 uppercase tracking-wider text-[10px] font-semibold">Drop-in CSS for src/index.css</p>
+<pre class="font-mono leading-relaxed">@keyframes flyInFromTop {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  60%  { transform: translateY(8%);    opacity: 1; }
+  80%  { transform: translateY(-4%); }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+
+.banner-flyin {
+  animation: flyInFromTop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-flyin { animation: none; }
+}</pre>
+  </section>
+
+</div>
+
+<script>
+  function replayAnimation() {
+    const banner = document.getElementById('banner');
+    if (!banner) return;
+    // Restart by removing and re-adding the class
+    banner.classList.remove('banner-flyin');
+    // Force reflow
+    void banner.offsetWidth;
+    banner.style.display = '';
+    banner.classList.add('banner-flyin');
+  }
+
+  function dismissBanner() {
+    const banner = document.getElementById('banner');
+    banner.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+    banner.style.transform = 'translateY(-100%)';
+    banner.style.opacity = '0';
+    setTimeout(() => { banner.style.display = 'none'; }, 400);
+  }
+</script>
+
+</body>
+</html>

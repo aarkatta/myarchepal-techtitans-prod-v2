@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const DB_NAME = 'ArchePalOfflineDB';
@@ -211,8 +211,7 @@ export const OfflineDiaryQueueService = {
             const imageUrl = await getDownloadURL(imageRef);
 
             // Update the document with image URL
-            // Note: We'd need to import updateDoc, but for simplicity we'll create a new doc
-            // The original flow in DigitalDiary.tsx creates new doc with imageUrl
+            await updateDoc(doc(db, 'DigitalDiary', docRef.id), { imageUrl });
             console.log(`📸 Image uploaded: ${imageUrl}`);
           } catch (imageError) {
             console.warn('⚠️ Could not upload image, but entry was synced:', imageError);

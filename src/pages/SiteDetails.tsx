@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapPin, Calendar, Users, FileText, Edit, Share2, Loader2, ChevronRight, Satellite, WifiOff, Globe, Lock, UserPlus, X, Shield, ClipboardList } from "lucide-react";
+import { MapPin, Calendar, Users, FileText, Edit, Share2, Loader2, ChevronRight, Satellite, WifiOff, Globe, Lock, UserPlus, X, Shield, ClipboardList, BookOpen, Clock, Package, Layers } from "lucide-react";
 import { ResponsiveLayout } from "@/components/ResponsiveLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { AccountButton } from "@/components/AccountButton";
@@ -20,7 +20,8 @@ import { DEFAULT_ORGANIZATION_ID, User } from "@/types/organization";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useNetworkStatus } from "@/hooks/use-network";
 import { OfflineCacheService } from "@/services/offline-cache";
 import { parseDate } from "@/lib/utils";
@@ -50,6 +51,20 @@ const SiteDetails = () => {
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   const [linkedTemplate, setLinkedTemplate] = useState<SiteTemplate | null>(null);
+
+  interface SiteDiaryEntry {
+    id: string;
+    userId: string;
+    title: string;
+    content: string;
+    category: "site" | "artifact" | "other";
+    imageUrl?: string;
+    date?: string;
+    time?: string;
+    createdAt?: Timestamp;
+  }
+  const [siteDiaryEntries, setSiteDiaryEntries] = useState<SiteDiaryEntry[]>([]);
+  const [diaryLoading, setDiaryLoading] = useState(false);
 
   // Site admin management state
   const [orgMembers, setOrgMembers] = useState<User[]>([]);
@@ -180,6 +195,31 @@ const SiteDetails = () => {
     };
 
     fetchSiteArtifacts();
+  }, [id, isOnline, networkChecked]);
+
+  // Fetch diary entries linked to this site
+  useEffect(() => {
+    if (!networkChecked || !id || !isOnline || !db) return;
+
+    let cancelled = false;
+    setDiaryLoading(true);
+
+    (async () => {
+      try {
+        const q = query(collection(db, "DigitalDiary"), where("siteId", "==", id));
+        const snap = await getDocs(q);
+        const entries = snap.docs.map(d => ({ id: d.id, ...d.data() } as SiteDiaryEntry));
+        entries.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+        if (!cancelled) setSiteDiaryEntries(entries);
+      } catch (err) {
+        console.warn("Could not fetch diary entries for site:", err);
+        if (!cancelled) setSiteDiaryEntries([]);
+      } finally {
+        if (!cancelled) setDiaryLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [id, isOnline, networkChecked]);
 
   // Load linked template name when site is ready
@@ -676,6 +716,89 @@ const SiteDetails = () => {
               ) : (
                 <p className="text-muted-foreground text-center py-4">
                   No artifacts cataloged yet
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Diary Entries linked to this site */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Diary Entries ({siteDiaryEntries.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {diaryLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <span className="text-muted-foreground text-sm">Loading diary entries...</span>
+                </div>
+              ) : siteDiaryEntries.length > 0 ? (
+                <div className="space-y-2">
+                  {siteDiaryEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
+                      onClick={() => navigate('/digital-diary')}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium truncate">
+                              {entry.title || "Untitled Entry"}
+                            </p>
+                            {entry.category && (
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                entry.category === "site"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                  : entry.category === "artifact"
+                                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                  : "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                              }`}>
+                                {entry.category === "site" && <MapPin className="w-2.5 h-2.5" />}
+                                {entry.category === "artifact" && <Package className="w-2.5 h-2.5" />}
+                                {entry.category === "other" && <Layers className="w-2.5 h-2.5" />}
+                                {entry.category.charAt(0).toUpperCase() + entry.category.slice(1)}
+                              </span>
+                            )}
+                          </div>
+                          {entry.content && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {entry.content}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
+                            {entry.date && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {entry.date}
+                              </span>
+                            )}
+                            {entry.time && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {entry.time}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {entry.imageUrl && (
+                          <img
+                            src={entry.imageUrl}
+                            alt=""
+                            className="w-12 h-12 object-cover rounded flex-shrink-0"
+                          />
+                        )}
+                        <ChevronRight className="w-4 h-4 text-muted-foreground self-center flex-shrink-0" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-4 text-sm">
+                  No diary entries linked to this site yet
                 </p>
               )}
             </CardContent>

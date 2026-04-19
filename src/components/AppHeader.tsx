@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Bell, User, LogIn, LogOut, Mail, WifiOff, Building2, HelpCircle, Info } from "lucide-react";
+import { Bell, User, LogIn, LogOut, Mail, WifiOff, Building2, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,10 +36,6 @@ export const AppHeader = () => {
   const showOrgBranding = organization &&
     organization.subscriptionLevel === 'Pro' &&
     organization.id !== DEFAULT_ORGANIZATION_ID;
-
-  // Show demo banner for guests or users on the default demo org
-  const isDefaultOrg = !organization || organization.id === DEFAULT_ORGANIZATION_ID;
-  const showDemoBanner = !isAuthenticated || isDefaultOrg;
 
   // Fetch archaeologist profile when user is available
   useEffect(() => {
@@ -80,24 +76,6 @@ export const AppHeader = () => {
 
   return (
     <header className="bg-card/95 backdrop-blur-lg sticky top-0 z-40 border-b border-border/50">
-      {/* Demo / Default-org banner */}
-      {showDemoBanner && (
-        <div className="w-full bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800 px-3 py-2 sm:px-4">
-          <div className="max-w-7xl mx-auto flex items-start gap-2 sm:items-center">
-            <Info className="w-4 h-4 shrink-0 mt-0.5 sm:mt-0 text-amber-600 dark:text-amber-400" />
-            <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300 leading-snug">
-              You are currently associated with Demo Organization. To use ArchePal for your Archaeology organization data management contact us at{" "}
-              <a
-                href="mailto:techtitansnc@gmail.com"
-                className="font-semibold underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
-              >
-                techtitansnc@gmail.com
-              </a>{" "}
-              and we can setup your private organization to support Data Security &amp; Privacy.
-            </p>
-          </div>
-        </div>
-      )}
       <div className="px-3 pt-3 pb-4 sm:px-4 sm:pt-4 sm:pb-5 md:px-6 md:pt-5 md:pb-6 lg:px-8 lg:pt-6 lg:pb-8">
       <div className="max-w-7xl mx-auto">
         {/* Top Row: Logo and Actions - Hide logo on desktop (shown in SideNav) */}

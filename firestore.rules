@@ -122,10 +122,13 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // DigitalDiary Collection - Public read, archaeologist write
+    // DigitalDiary Collection - Public read, user can only write their own entries
     match /DigitalDiary/{digitaldiaryId} {
       allow read: if true;
-      allow create, update, delete: if isArchaeologist();
+      allow create: if request.auth != null
+                     && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+                             && resource.data.userId == request.auth.uid;
     }
 
     // DropdownOptions Collection - Predefined dropdown values
