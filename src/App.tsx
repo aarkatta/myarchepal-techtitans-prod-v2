@@ -76,6 +76,9 @@ import MyAssignments from "./pages/MyAssignments";
 import FormFill from "./pages/FormFill";
 import SubmissionDetail from "./pages/SubmissionDetail";
 import UploadFilledForm from "./pages/UploadFilledForm";
+import BoothBattleSubmit from "./pages/BoothBattleSubmit";
+import BoothBattleLeaderboard from "./pages/BoothBattleLeaderboard";
+import BoothBattleAdmin from "./pages/BoothBattleAdmin";
 import AdminUsers from "./pages/AdminUsers";
 import Help from "./pages/Help";
 import Giveback from "./pages/Giveback";
@@ -284,6 +287,15 @@ const App = () => {
               <ProtectedRoute>
                 <Deactivate />
               </ProtectedRoute>
+            } />
+
+            {/* Booth Battle — public, chromeless, iframe-embeddable */}
+            <Route path="/booth-battle" element={<BoothBattleLeaderboard />} />
+            <Route path="/booth-battle/submit" element={<BoothBattleSubmit />} />
+            <Route path="/booth-battle/admin" element={
+              <AdminRoute>
+                <BoothBattleAdmin />
+              </AdminRoute>
             } />
 
             {/* Catch-all route for 404 pages */}

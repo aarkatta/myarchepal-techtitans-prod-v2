@@ -33,11 +33,17 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserFromAuth = exports.updateUserPassword = void 0;
+exports.deleteUserFromAuth = exports.updateUserPassword = exports.boothBattleAdminAction = exports.processBoothBattleSubmission = exports.extractDiaryKeywords = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
+var extractDiaryKeywords_1 = require("./extractDiaryKeywords");
+Object.defineProperty(exports, "extractDiaryKeywords", { enumerable: true, get: function () { return extractDiaryKeywords_1.extractDiaryKeywords; } });
+var processBoothBattleSubmission_1 = require("./processBoothBattleSubmission");
+Object.defineProperty(exports, "processBoothBattleSubmission", { enumerable: true, get: function () { return processBoothBattleSubmission_1.processBoothBattleSubmission; } });
+var boothBattleAdminAction_1 = require("./boothBattleAdminAction");
+Object.defineProperty(exports, "boothBattleAdminAction", { enumerable: true, get: function () { return boothBattleAdminAction_1.boothBattleAdminAction; } });
 /**
  * Cloud Function to update a user's password in Firebase Authentication
  * This can only be called by Super Admins

@@ -25,6 +25,7 @@ import { db } from "@/lib/firebase";
 import { useNetworkStatus } from "@/hooks/use-network";
 import { OfflineCacheService } from "@/services/offline-cache";
 import { parseDate } from "@/lib/utils";
+import { isBoothBattleOrg } from "@/lib/boothBattle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -62,6 +63,7 @@ const SiteDetails = () => {
     date?: string;
     time?: string;
     createdAt?: Timestamp;
+    keywords?: string[];
   }
   const [siteDiaryEntries, setSiteDiaryEntries] = useState<SiteDiaryEntry[]>([]);
   const [diaryLoading, setDiaryLoading] = useState(false);
@@ -768,6 +770,20 @@ const SiteDetails = () => {
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {entry.content}
                             </p>
+                          )}
+                          {isBoothBattleOrg(organization?.id)
+                            && Array.isArray(entry.keywords)
+                            && entry.keywords.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {entry.keywords.map((kw) => (
+                                <span
+                                  key={kw}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                >
+                                  {kw}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
                             {entry.date && (

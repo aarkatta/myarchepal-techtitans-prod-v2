@@ -371,3 +371,49 @@ Phase 4 (form fill + offline) → Phase 6 (routing) → Phase 7 (validation)
   - `max_tokens: 16000`; truncation repair helper for edge cases
 - Frontend artifact/article image analysis (`src/services/azure-openai.ts`) uses GPT-4o via Azure OpenAI
   - Env vars: `VITE_AZURE_OPENAI_ENDPOINT`, `VITE_AZURE_OPENAI_API_KEY`, `VITE_AZURE_OPENAI_DEPLOYMENT_NAME`, `VITE_AZURE_OPENAI_API_VERSION`
+
+---
+
+## Booth Battle Feature
+
+**Plan:** `docs/booth-battle-plan.md` — read this before starting any task below.
+**Spec:** `docs/booth-battle-requirements.md`
+**Org:** First Championship Houston (`vD4x5sGreTsscAp66FgA`)
+**Target ship:** Wednesday, FLL 2026 World Championship · Houston
+
+**IMPORTANT:** After completing each phase below, mark it `✅` here in CLAUDE.md and add a one-line note describing what was built (file paths + key decisions made). This keeps future sessions in sync without re-reading the full codebase.
+
+**Foundation already in place (this session):**
+- ✅ 160 sites `C1`…`C160` seeded under org `vD4x5sGreTsscAp66FgA` via `scripts/seed-sites.js` (Houston/Texas coords; description `"First Championship C${n}"`)
+- ✅ Storage rule for `profile-pictures/{userId}/**` (unrelated, but landed today)
+- ✅ Cloud Function `extractDiaryKeywords` (`functions/src/extractDiaryKeywords.ts`) — auto-extracts exactly 5 distinctive keywords from `content` + `aiImageSummary` for diary entries linked to sites in this org. Idempotent. Uses OpenAI gpt-5.4-mini. Secret: `OPENAI_API_KEY`.
+
+**Architecture — server-side scoring (uncheatable):**
+
+```
+Client → boothBattleSubmissions/{auto-id} (public CREATE only, status='pending')
+       → onCreate Cloud Function reads recorded keywords (admin SDK)
+       → computes score, transactional write to boothBattleScores + back to submission doc (status='scored')
+       → Client onSnapshot on its submission doc receives result
+Leaderboard reads boothBattleScores via onSnapshot (public READ only).
+```
+
+Clients cannot write `boothBattleScores` directly — Firestore rules block it. Submission doc doubles as audit log AND result delivery channel.
+
+**Phases:**
+
+- ✅ Phase 0 — Foundation: `src/types/boothBattle.ts` (`BoothBattleSubmission`, `BoothBattleScore`, `BOOTH_BATTLE_ORG_ID`); `src/lib/boothBattle.ts` (`isBoothBattleOrg`, `normalizeKeyword`, `slugifyName`, `formatHoustonTime`, `countKeywordMatches`, `scoreFromMatches`, `naturalSiteCompare`); `firestore.rules` — public CREATE-only rule for `boothBattleSubmissions` with payload-shape validation (orgId pinned, status='pending', exactly 5 keywords, rejects pre-populated score fields), public READ on submissions + scores, all client writes to `boothBattleScores` blocked; `firestore.indexes.json` — composite index on `boothBattleScores` (orgId asc, bestScore desc, bestSubmittedAt asc); `vercel.json` — `Content-Security-Policy: frame-ancestors *` for `/booth-battle/*` and `/booth-battle`. NFKD-based normalization (no separate diacritic strip — the `[^a-z0-9]` filter already drops combining marks).
+- ✅ Phase 1 — Keyword display gating: `DiaryEntry` interface in `src/pages/DigitalDiary.tsx` gained `keywords?: string[]`; chip row renders below content gated on `isBoothBattleOrg(organization?.id)`. `SiteDiaryEntry` interface in `src/pages/SiteDetails.tsx` gained the same; chips render on each site-detail diary card. `SiteLists.tsx` had no keyword surface (sites don't carry keywords) — no changes needed.
+- ✅ Phase 2 — Scoring Cloud Function `processBoothBattleSubmission` (`functions/src/processBoothBattleSubmission.ts`): v2 `onDocumentCreated` on `boothBattleSubmissions/{id}`, region us-central1. Validates orgId + status==pending (idempotency). Reads most-recent `DigitalDiary` doc by `siteId` ordered by `keywordsExtractedAt desc`. Normalized exact match; score = matches × 50. Transactional UPSERT to `boothBattleScores/{siteId}_{slug(visitorName)}` (always updates latest*; only updates best* when newScore > old bestScore). Same transaction writes status='scored'/'rejected' + result fields back to the submission. Re-exported from `functions/src/index.ts`. Inline duplication of `normalizeKeyword`/`slugifyName` (kept intentionally local to functions package).
+- ✅ Phase 3 — Visitor submission form: `src/services/boothBattle.ts` — `BoothBattleService.listSites()` (excludes archived, natural sort `C2 < C19`), `submitAttempt()` (writes pending submission with `serverTimestamp` clientSubmittedAt; rejects pre-populated score fields by construction). `src/pages/BoothBattleSubmit.tsx` — chromeless, react-hook-form + zod; searchable `Command`/`Popover` site picker; 5 keyword inputs + visitor name; after submit listens via `onSnapshot` on its own doc with 20s timeout fallback; result card distinguishes first-scored / new best / best stays; rejected card for "no recorded keywords yet"; "Submit another" CTA. Route `/booth-battle/submit` (no auth wrapper).
+- ✅ Phase 4 — Leaderboard `src/pages/BoothBattleLeaderboard.tsx` (route `/booth-battle`, no auth wrapper): real-time `onSnapshot` on `boothBattleScores` filtered by orgId + ordered by `bestScore desc, bestSubmittedAt asc`. Stats header (players / top score / perfect 5/5 count). 2-1-3 podium with crowns. Ranked list rows show keyword dots, Houston timestamp, retake `↑` indicator when latest != best, PERFECT badge at 250.
+- ✅ Phase 5 — Host controls: callable v2 function `boothBattleAdminAction` (`functions/src/boothBattleAdminAction.ts`) — auth-gated (caller must be SUPER_ADMIN OR ORG_ADMIN of org `vD4x5sGreTsscAp66FgA`); supports `edit` (deletes old score doc + writes a fresh pending submission tagged `adminEditBy: uid` so the trigger re-scores cleanly), `delete` (single score doc), `reset` (batched delete of every doc in `boothBattleScores` AND `boothBattleSubmissions`). Page `src/pages/BoothBattleAdmin.tsx` (route `/booth-battle/admin` under `<AdminRoute>`) lists scores with edit dialog (visitor name + 5 keywords), delete `AlertDialog`, and "Reset all" `AlertDialog`. Service helpers `BoothBattleService.adminEditScore/adminDeleteScore/adminResetAll` wrap `httpsCallable`.
+- ✅ Phase 6 — Verification: `npm run build` (Vite) succeeds. `cd functions && npm run build` (tsc) succeeds. `npx tsc --noEmit -p tsconfig.app.json` shows zero new errors (only pre-existing errors in ChatArea/EditSite/OrgAdminDashboard/users.ts, identical set as before Phase 0). `npx eslint` shows zero issues across all new booth-battle files. Pre-existing lint errors in DigitalDiary/SiteDetails confirmed via stash diff to be unrelated to this work.
+
+**Locked decisions (do not relitigate):**
+- Site display = bare name (`"C1"`, `"C25"`); team names ARE C1…C160
+- Real-time = Firestore `onSnapshot`; exact-normalized keyword match only
+- Retakes allowed; keep highest score; one `boothBattleScores` doc per `(siteId, visitorName)` with `bestScore` + `latestScore`; tie-breaker = `bestSubmittedAt`
+- **All scoring server-side** — clients write `boothBattleSubmissions`, Cloud Function writes `boothBattleScores`; rules block client writes to scores
+- No auth; both `/booth-battle/submit` and `/booth-battle` render chromeless (no AppHeader/BottomNav) for iframe embedding on team websites
+- Display timestamps in `America/Chicago`; storage stays UTC

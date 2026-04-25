@@ -371,6 +371,39 @@ service cloud.firestore {
                              && resource.data.isDraft == true));
     }
 
+    // ========================================================================
+    // BOOTH BATTLE — public iframe-embedded scoring for org vD4x5sGreTsscAp66FgA
+    // Submissions are write-once; the Cloud Function trigger computes scores
+    // and writes derived state to boothBattleScores. Clients can only CREATE
+    // a pending submission; no client may write boothBattleScores directly.
+    // ========================================================================
+
+    match /boothBattleSubmissions/{submissionId} {
+      allow read: if true;
+      allow create: if request.resource.data.orgId == 'vD4x5sGreTsscAp66FgA'
+                     && request.resource.data.status == 'pending'
+                     && request.resource.data.submittedKeywords is list
+                     && request.resource.data.submittedKeywords.size() == 5
+                     && request.resource.data.visitorName is string
+                     && request.resource.data.visitorName.size() > 0
+                     && request.resource.data.visitorName.size() <= 80
+                     && request.resource.data.siteId is string
+                     && request.resource.data.siteId.size() > 0
+                     && !('score' in request.resource.data)
+                     && !('matches' in request.resource.data)
+                     && !('previousBestScore' in request.resource.data)
+                     && !('currentBestScore' in request.resource.data)
+                     && !('isNewBest' in request.resource.data)
+                     && !('processedAt' in request.resource.data)
+                     && !('rejectionReason' in request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /boothBattleScores/{scoreId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

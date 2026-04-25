@@ -27,12 +27,34 @@
       ]
     },
     {
-      "collectionGroup": "submissions",
-      "queryScope": "COLLECTION_GROUP",
+      "collectionGroup": "boothBattleScores",
+      "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "consultantId", "order": "ASCENDING" }
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "bestScore", "order": "DESCENDING" },
+        { "fieldPath": "bestSubmittedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "DigitalDiary",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "siteId", "order": "ASCENDING" },
+        { "fieldPath": "keywordsExtractedAt", "order": "DESCENDING" }
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "submissions",
+      "fieldPath": "consultantId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

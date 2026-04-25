@@ -4,6 +4,10 @@ import * as admin from "firebase-admin";
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
+export { extractDiaryKeywords } from "./extractDiaryKeywords";
+export { processBoothBattleSubmission } from "./processBoothBattleSubmission";
+export { boothBattleAdminAction } from "./boothBattleAdminAction";
+
 /**
  * Cloud Function to update a user's password in Firebase Authentication
  * This can only be called by Super Admins

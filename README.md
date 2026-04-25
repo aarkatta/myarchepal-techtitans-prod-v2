@@ -119,6 +119,7 @@ npm run dev:backend
 - **Uvicorn** - ASGI server
 - **Pydantic** - Data validation
 - **Azure OpenAI** - AI services
+- **PermzPlus** - Permissions Managment
 
 ## Features
 

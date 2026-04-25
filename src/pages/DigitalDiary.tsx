@@ -23,6 +23,7 @@ import { AzureOpenAIService } from "@/services/azure-openai";
 import { SitesService, type Site } from "@/services/sites";
 import { SiteTemplatesService } from "@/services/siteTemplates";
 import { useUser } from "@/hooks/use-user";
+import { isBoothBattleOrg } from "@/lib/boothBattle";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ interface DiaryEntry {
   date: string;
   time: string;
   siteId?: string;
+  keywords?: string[];
   // Offline-specific fields
   isOffline?: boolean;
   status?: 'pending';
@@ -1002,6 +1004,21 @@ const DigitalDiary = () => {
                         />
                       )}
                       <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
+                      {isBoothBattleOrg(organization?.id)
+                        && 'keywords' in entry
+                        && Array.isArray((entry as DiaryEntry).keywords)
+                        && ((entry as DiaryEntry).keywords?.length ?? 0) > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {(entry as DiaryEntry).keywords!.map((kw) => (
+                            <span
+                              key={kw}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                            >
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
