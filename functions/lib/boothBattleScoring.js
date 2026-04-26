@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_KEYWORDS = exports.POINTS_PER_MATCH = exports.TARGET_ORG_ID = void 0;
+exports.MAX_KEYWORDS = exports.MIN_KEYWORDS = exports.POINTS_PER_MATCH = exports.TARGET_ORG_ID = void 0;
 exports.normalizeKeyword = normalizeKeyword;
 exports.slugifyName = slugifyName;
 exports.countMatches = countMatches;
@@ -41,7 +41,8 @@ exports.scoreSubmission = scoreSubmission;
 const admin = __importStar(require("firebase-admin"));
 exports.TARGET_ORG_ID = "vD4x5sGreTsscAp66FgA";
 exports.POINTS_PER_MATCH = 50;
-exports.MAX_KEYWORDS = 5;
+exports.MIN_KEYWORDS = 1;
+exports.MAX_KEYWORDS = 100;
 function normalizeKeyword(input) {
     return input
         .toLowerCase()
@@ -97,7 +98,8 @@ async function scoreSubmission(submissionRef) {
     if (!siteId ||
         !visitorName ||
         !Array.isArray(submittedKeywords) ||
-        submittedKeywords.length !== exports.MAX_KEYWORDS) {
+        submittedKeywords.length < exports.MIN_KEYWORDS ||
+        submittedKeywords.length > exports.MAX_KEYWORDS) {
         await submissionRef.update({
             status: "rejected",
             rejectionReason: "Invalid submission payload.",

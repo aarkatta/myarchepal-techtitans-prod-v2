@@ -379,14 +379,22 @@ service cloud.firestore {
     // ========================================================================
 
     match /boothBattleSubmissions/{submissionId} {
-      allow read: if true;
+      // Visitor reads its own submission by ID via onSnapshot to receive the
+      // scored result. Listing is blocked so the public can't enumerate emails.
+      allow get: if true;
+      allow list: if false;
       allow create: if request.resource.data.orgId == 'vD4x5sGreTsscAp66FgA'
                      && request.resource.data.status == 'pending'
                      && request.resource.data.submittedKeywords is list
-                     && request.resource.data.submittedKeywords.size() == 5
+                     && request.resource.data.submittedKeywords.size() >= 1
+                     && request.resource.data.submittedKeywords.size() <= 100
                      && request.resource.data.visitorName is string
                      && request.resource.data.visitorName.size() > 0
                      && request.resource.data.visitorName.size() <= 80
+                     && request.resource.data.visitorEmail is string
+                     && request.resource.data.visitorEmail.size() > 0
+                     && request.resource.data.visitorEmail.size() <= 200
+                     && request.resource.data.visitorEmail.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
                      && request.resource.data.siteId is string
                      && request.resource.data.siteId.size() > 0
                      && !('score' in request.resource.data)

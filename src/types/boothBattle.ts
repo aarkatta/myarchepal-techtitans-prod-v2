@@ -9,6 +9,7 @@ export interface BoothBattleSubmission {
   orgId: typeof BOOTH_BATTLE_ORG_ID;
   siteId: string;
   visitorName: string;
+  visitorEmail?: string;
   submittedKeywords: string[];
   status: BoothBattleSubmissionStatus;
   clientSubmittedAt: Timestamp;

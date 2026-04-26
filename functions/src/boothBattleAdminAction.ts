@@ -1,7 +1,13 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import * as admin from "firebase-admin";
-import { scoreSubmission, slugifyName, TARGET_ORG_ID } from "./boothBattleScoring";
+import {
+  scoreSubmission,
+  slugifyName,
+  TARGET_ORG_ID,
+  MIN_KEYWORDS,
+  MAX_KEYWORDS,
+} from "./boothBattleScoring";
 
 interface EditPayload {
   action: "edit";
@@ -106,11 +112,12 @@ export const boothBattleAdminAction = onCall(
       if (
         !payload.visitorName ||
         !Array.isArray(payload.submittedKeywords) ||
-        payload.submittedKeywords.length !== 5
+        payload.submittedKeywords.length < MIN_KEYWORDS ||
+        payload.submittedKeywords.length > MAX_KEYWORDS
       ) {
         throw new HttpsError(
           "invalid-argument",
-          "visitorName and 5 keywords required.",
+          `visitorName and ${MIN_KEYWORDS}-${MAX_KEYWORDS} keywords required.`,
         );
       }
       const visitorName = String(payload.visitorName).trim();

@@ -104,8 +104,9 @@ exports.boothBattleAdminAction = (0, https_1.onCall)({ region: "us-central1" }, 
         }
         if (!payload.visitorName ||
             !Array.isArray(payload.submittedKeywords) ||
-            payload.submittedKeywords.length !== 5) {
-            throw new https_1.HttpsError("invalid-argument", "visitorName and 5 keywords required.");
+            payload.submittedKeywords.length < boothBattleScoring_1.MIN_KEYWORDS ||
+            payload.submittedKeywords.length > boothBattleScoring_1.MAX_KEYWORDS) {
+            throw new https_1.HttpsError("invalid-argument", `visitorName and ${boothBattleScoring_1.MIN_KEYWORDS}-${boothBattleScoring_1.MAX_KEYWORDS} keywords required.`);
         }
         const visitorName = String(payload.visitorName).trim();
         if (!visitorName) {

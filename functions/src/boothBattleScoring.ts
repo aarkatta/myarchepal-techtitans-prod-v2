@@ -2,7 +2,8 @@ import * as admin from "firebase-admin";
 
 export const TARGET_ORG_ID = "vD4x5sGreTsscAp66FgA";
 export const POINTS_PER_MATCH = 50;
-export const MAX_KEYWORDS = 5;
+export const MIN_KEYWORDS = 1;
+export const MAX_KEYWORDS = 100;
 
 export function normalizeKeyword(input: string): string {
   return input
@@ -71,7 +72,8 @@ export async function scoreSubmission(
     !siteId ||
     !visitorName ||
     !Array.isArray(submittedKeywords) ||
-    submittedKeywords.length !== MAX_KEYWORDS
+    submittedKeywords.length < MIN_KEYWORDS ||
+    submittedKeywords.length > MAX_KEYWORDS
   ) {
     await submissionRef.update({
       status: "rejected",

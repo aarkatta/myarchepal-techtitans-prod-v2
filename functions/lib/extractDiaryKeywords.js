@@ -125,12 +125,16 @@ async function callOpenAI(text, apiKey) {
         messages: [
             {
                 role: "system",
-                content: "Extract exactly 5 distinctive keywords or short phrases from the booth description. " +
-                    "Focus on concrete, specific nouns: technical mechanisms, mission themes, materials, " +
-                    "team identifiers, mascots, or unique design elements. " +
-                    'Avoid generic words like "team", "robot", "lego", "fun", "kids" that would apply ' +
-                    "to most FLL booths. Single words preferred over phrases when possible. " +
-                    'Return strict JSON of the form {"keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]}.',
+                content: "Extract every distinctive keyword or short phrase from the booth description. " +
+                    "Include all concrete, specific nouns you can find: technical mechanisms, mission " +
+                    "themes, materials, team identifiers, mascots, unique design elements, tools, " +
+                    "techniques, and notable details. Be thorough — capture anything a visitor might " +
+                    "remember about this booth. " +
+                    'Avoid only the most generic words like "team", "robot", "lego", "fun", "kids" that ' +
+                    "would apply to most FLL booths. Single words preferred over phrases when possible. " +
+                    "Do not invent keywords that are not supported by the source text. " +
+                    'Return strict JSON of the form {"keywords": ["keyword1", "keyword2", ...]} ' +
+                    "with as many keywords as the description supports.",
             },
             { role: "user", content: text },
         ],
@@ -153,7 +157,6 @@ async function callOpenAI(text, apiKey) {
     const arr = Array.isArray(parsed.keywords) ? parsed.keywords : [];
     return arr
         .map((k) => String(k).trim())
-        .filter((k) => k.length > 0)
-        .slice(0, 5);
+        .filter((k) => k.length > 0);
 }
 //# sourceMappingURL=extractDiaryKeywords.js.map

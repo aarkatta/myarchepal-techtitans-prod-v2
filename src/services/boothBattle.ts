@@ -26,6 +26,7 @@ export interface BoothBattleSiteOption {
 export interface SubmitBoothBattlePayload {
   siteId: string;
   visitorName: string;
+  visitorEmail: string;
   submittedKeywords: string[];
 }
 
@@ -65,12 +66,22 @@ export class BoothBattleService {
     payload: SubmitBoothBattlePayload,
   ): Promise<DocumentReference> {
     if (!db) throw new Error('Firebase is not properly initialized');
-    if (payload.submittedKeywords.length !== 5) {
-      throw new Error('Exactly 5 keywords are required.');
+    if (payload.submittedKeywords.length < 1) {
+      throw new Error('Add at least one keyword.');
+    }
+    if (payload.submittedKeywords.length > 100) {
+      throw new Error('Up to 100 keywords allowed.');
     }
     const trimmedName = payload.visitorName.trim();
     if (!trimmedName) {
       throw new Error('Visitor name is required.');
+    }
+    const trimmedEmail = payload.visitorEmail.trim().toLowerCase();
+    if (!trimmedEmail) {
+      throw new Error('Email is required.');
+    }
+    if (trimmedEmail.length > 200) {
+      throw new Error('Email is too long.');
     }
     if (!payload.siteId) {
       throw new Error('Booth selection is required.');
@@ -80,6 +91,7 @@ export class BoothBattleService {
       orgId: BOOTH_BATTLE_ORG_ID,
       siteId: payload.siteId,
       visitorName: trimmedName,
+      visitorEmail: trimmedEmail,
       submittedKeywords: payload.submittedKeywords.map((k) => k.trim()),
       status: 'pending',
       // Use server timestamp so Firestore validates clock authoritatively.

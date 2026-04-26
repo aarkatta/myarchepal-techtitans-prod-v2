@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useUser } from '@/hooks/use-user';
-import { isBoothBattleOrg } from '@/lib/boothBattle';
-import { useForm } from 'react-hook-form';
+import { isBoothBattleOrg, normalizeKeyword } from '@/lib/boothBattle';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Check, ChevronsUpDown, Loader2, Sparkles, PartyPopper, AlertCircle } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, Sparkles, PartyPopper, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,20 +25,123 @@ import {
   type BoothBattleSiteOption,
 } from '@/services/boothBattle';
 
+const MAX_KEYWORDS = 100;
+
 const formSchema = z.object({
   siteId: z.string().min(1, 'Pick the booth you visited'),
   visitorName: z
     .string()
     .min(1, 'Enter your team or visitor name')
     .max(80, 'Name is too long'),
-  k0: z.string().min(1, 'Required'),
-  k1: z.string().min(1, 'Required'),
-  k2: z.string().min(1, 'Required'),
-  k3: z.string().min(1, 'Required'),
-  k4: z.string().min(1, 'Required'),
+  visitorEmail: z
+    .string()
+    .min(1, 'Enter your email')
+    .email('Enter a valid email')
+    .max(200, 'Email is too long'),
+  keywords: z
+    .array(z.string().min(1))
+    .min(1, 'Add at least one keyword')
+    .max(MAX_KEYWORDS, `Up to ${MAX_KEYWORDS} keywords`),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+interface KeywordChipInputProps {
+  value: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+}
+
+function KeywordChipInput({ value, onChange, disabled }: KeywordChipInputProps) {
+  const [draft, setDraft] = useState('');
+
+  const addTokens = (raw: string) => {
+    const tokens = raw
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tokens.length === 0) return;
+    const seen = new Set(value.map(normalizeKeyword));
+    const next = [...value];
+    for (const t of tokens) {
+      if (next.length >= MAX_KEYWORDS) break;
+      const key = normalizeKeyword(t);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      next.push(t);
+    }
+    onChange(next);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (draft.trim()) {
+        addTokens(draft);
+        setDraft('');
+      }
+      return;
+    }
+    if (e.key === 'Backspace' && draft.length === 0 && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  };
+
+  const handleBlur = () => {
+    if (draft.trim()) {
+      addTokens(draft);
+      setDraft('');
+    }
+  };
+
+  const removeAt = (i: number) => {
+    onChange(value.filter((_, idx) => idx !== i));
+  };
+
+  const atLimit = value.length >= MAX_KEYWORDS;
+
+  return (
+    <div className="space-y-2">
+      <Input
+        autoComplete="off"
+        placeholder={
+          atLimit
+            ? `Limit reached (${MAX_KEYWORDS})`
+            : 'Type a keyword, press Enter or use commas'
+        }
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        disabled={disabled || atLimit}
+      />
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((kw, i) => (
+            <span
+              key={`${kw}-${i}`}
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100 px-2.5 py-1 text-xs font-medium"
+            >
+              {kw}
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                disabled={disabled}
+                className="rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800 p-0.5 transition-colors"
+                aria-label={`Remove ${kw}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        {value.length} / {MAX_KEYWORDS} keywords
+      </p>
+    </div>
+  );
+}
 
 type ViewState =
   | { kind: 'form' }
@@ -57,7 +160,12 @@ export default function BoothBattleSubmit() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { siteId: '', visitorName: '', k0: '', k1: '', k2: '', k3: '', k4: '' },
+    defaultValues: {
+      siteId: '',
+      visitorName: '',
+      visitorEmail: '',
+      keywords: [],
+    },
   });
 
   const siteId = form.watch('siteId');
@@ -93,7 +201,8 @@ export default function BoothBattleSubmit() {
       await BoothBattleService.submitAttempt({
         siteId: values.siteId,
         visitorName: values.visitorName,
-        submittedKeywords: [values.k0, values.k1, values.k2, values.k3, values.k4],
+        visitorEmail: values.visitorEmail,
+        submittedKeywords: values.keywords,
       });
       setView({ kind: 'thanks', siteName });
     } catch (err) {
@@ -114,11 +223,8 @@ export default function BoothBattleSubmit() {
     form.reset({
       siteId: '',
       visitorName: form.getValues('visitorName'),
-      k0: '',
-      k1: '',
-      k2: '',
-      k3: '',
-      k4: '',
+      visitorEmail: form.getValues('visitorEmail'),
+      keywords: [],
     });
     setView({ kind: 'form' });
   };
@@ -135,7 +241,7 @@ export default function BoothBattleSubmit() {
           </div>
           <h1 className="text-2xl font-bold">Score Your Visit</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Pick the booth you just visited and list 5 keywords you remember.
+            Pick the booth you just visited and list the keywords you remember.
           </p>
         </div>
 
@@ -220,26 +326,39 @@ export default function BoothBattleSubmit() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>5 keywords from the booth</Label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {(['k0', 'k1', 'k2', 'k3', 'k4'] as const).map((name, i) => {
-                      const err = form.formState.errors[name];
-                      return (
-                        <div key={name}>
-                          <Input
-                            autoComplete="off"
-                            placeholder={`Keyword ${i + 1}`}
-                            {...form.register(name)}
-                          />
-                          {err && (
-                            <p className="text-[10px] text-destructive mt-0.5">
-                              {err.message}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <Label htmlFor="visitorEmail">Email address</Label>
+                  <Input
+                    id="visitorEmail"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    {...form.register('visitorEmail')}
+                  />
+                  {form.formState.errors.visitorEmail && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.visitorEmail.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Keywords from the booth</Label>
+                  <Controller
+                    control={form.control}
+                    name="keywords"
+                    render={({ field }) => (
+                      <KeywordChipInput
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {form.formState.errors.keywords && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.keywords.message as string}
+                    </p>
+                  )}
                 </div>
 
                 <Button type="submit" className="w-full">
