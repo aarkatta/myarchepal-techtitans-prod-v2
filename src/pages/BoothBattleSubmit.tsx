@@ -114,20 +114,21 @@ function KeywordChipInput({ value, onChange, disabled }: KeywordChipInputProps) 
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         disabled={disabled || atLimit}
+        className="bg-[#2a1a10] border-[#6a4226] text-slate-100 placeholder:text-amber-200/30 focus-visible:ring-[#b8860b]"
       />
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map((kw, i) => (
             <span
               key={`${kw}-${i}`}
-              className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100 px-2.5 py-1 text-xs font-medium"
+              className="inline-flex items-center gap-1 rounded-full bg-[#b8860b]/20 text-[#d4a96a] border border-[#b8860b]/30 px-2.5 py-1 text-xs font-medium"
             >
               {kw}
               <button
                 type="button"
                 onClick={() => removeAt(i)}
                 disabled={disabled}
-                className="rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800 p-0.5 transition-colors"
+                className="rounded-full hover:bg-[#b8860b]/30 p-0.5 transition-colors"
                 aria-label={`Remove ${kw}`}
               >
                 <X className="w-3 h-3" />
@@ -136,7 +137,7 @@ function KeywordChipInput({ value, onChange, disabled }: KeywordChipInputProps) 
           ))}
         </div>
       )}
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-[11px] text-amber-200/60">
         {value.length} / {MAX_KEYWORDS} keywords
       </p>
     </div>
@@ -229,28 +230,33 @@ export default function BoothBattleSubmit() {
     setView({ kind: 'form' });
   };
 
+  const inputClass =
+    'bg-[#2a1a10] border-[#6a4226] text-slate-100 placeholder:text-amber-200/30 focus-visible:ring-[#b8860b]';
+  const brassButtonClass =
+    'bg-[#b8860b] hover:bg-[#9a7308] text-[#1a0f08] font-semibold focus-visible:ring-[#b8860b]';
+
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6">
+    <div className="min-h-screen bg-[#4a2c1a] text-slate-100 p-4 sm:p-6">
       <div className="mx-auto max-w-md space-y-4">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+          <div className="inline-flex items-center gap-2 text-[#d4a96a] mb-1">
             <Sparkles className="w-5 h-5" />
             <span className="text-xs font-semibold uppercase tracking-wide">
               Booth Battle
             </span>
           </div>
-          <h1 className="text-2xl font-bold">Score Your Visit</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold text-slate-50">Score Your Visit</h1>
+          <p className="text-sm text-amber-200/70 mt-1">
             Pick the booth you just visited and list the keywords you remember.
           </p>
         </div>
 
         {view.kind === 'form' && (
-          <Card>
+          <Card className="bg-[#3a2415] border-[#6a4226]">
             <CardContent className="p-4 sm:p-6 space-y-4">
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Booth visited</Label>
+                  <Label className="text-amber-100">Booth visited</Label>
                   <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -259,7 +265,7 @@ export default function BoothBattleSubmit() {
                         role="combobox"
                         aria-expanded={pickerOpen}
                         disabled={sitesLoading || !!sitesError}
-                        className="w-full justify-between font-normal"
+                        className="w-full justify-between font-normal bg-[#2a1a10] border-[#6a4226] text-slate-100 hover:bg-[#5b3621] hover:text-slate-100 focus-visible:ring-[#b8860b]"
                       >
                         {sitesLoading
                           ? 'Loading booths…'
@@ -269,16 +275,22 @@ export default function BoothBattleSubmit() {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Search booths…" />
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#2a1a10] border-[#6a4226]">
+                      <Command className="bg-transparent">
+                        <CommandInput
+                          placeholder="Search booths…"
+                          className="text-slate-100 placeholder:text-amber-200/40"
+                        />
                         <CommandList>
-                          <CommandEmpty>No booth found.</CommandEmpty>
+                          <CommandEmpty className="text-amber-200/60 py-6 text-center text-sm">
+                            No booth found.
+                          </CommandEmpty>
                           <CommandGroup>
                             {sites.map((s) => (
                               <CommandItem
                                 key={s.id}
                                 value={s.name}
+                                className="text-slate-100 aria-selected:bg-[#5b3621] aria-selected:text-slate-50 cursor-pointer"
                                 onSelect={() => {
                                   form.setValue('siteId', s.id, {
                                     shouldValidate: true,
@@ -288,7 +300,7 @@ export default function BoothBattleSubmit() {
                               >
                                 <Check
                                   className={cn(
-                                    'mr-2 h-4 w-4',
+                                    'mr-2 h-4 w-4 text-[#b8860b]',
                                     s.id === siteId ? 'opacity-100' : 'opacity-0',
                                   )}
                                 />
@@ -301,49 +313,55 @@ export default function BoothBattleSubmit() {
                     </PopoverContent>
                   </Popover>
                   {sitesError && (
-                    <p className="text-xs text-destructive">{sitesError}</p>
+                    <p className="text-xs text-red-400">{sitesError}</p>
                   )}
                   {form.formState.errors.siteId && (
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-red-400">
                       {form.formState.errors.siteId.message}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="visitorName">Your team or name</Label>
+                  <Label htmlFor="visitorName" className="text-amber-100">
+                    Your team or name
+                  </Label>
                   <Input
                     id="visitorName"
                     autoComplete="off"
                     placeholder="e.g. C42"
+                    className={inputClass}
                     {...form.register('visitorName')}
                   />
                   {form.formState.errors.visitorName && (
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-red-400">
                       {form.formState.errors.visitorName.message}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="visitorEmail">Email address</Label>
+                  <Label htmlFor="visitorEmail" className="text-amber-100">
+                    Email address
+                  </Label>
                   <Input
                     id="visitorEmail"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
                     placeholder="you@example.com"
+                    className={inputClass}
                     {...form.register('visitorEmail')}
                   />
                   {form.formState.errors.visitorEmail && (
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-red-400">
                       {form.formState.errors.visitorEmail.message}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Keywords from the booth</Label>
+                  <Label className="text-amber-100">Keywords from the booth</Label>
                   <Controller
                     control={form.control}
                     name="keywords"
@@ -355,13 +373,13 @@ export default function BoothBattleSubmit() {
                     )}
                   />
                   {form.formState.errors.keywords && (
-                    <p className="text-xs text-destructive">
+                    <p className="text-xs text-red-400">
                       {form.formState.errors.keywords.message as string}
                     </p>
                   )}
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className={`w-full ${brassButtonClass}`}>
                   Submit
                 </Button>
               </form>
@@ -370,8 +388,8 @@ export default function BoothBattleSubmit() {
         )}
 
         {view.kind === 'submitting' && (
-          <Card>
-            <CardContent className="p-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Card className="bg-[#3a2415] border-[#6a4226]">
+            <CardContent className="p-6 flex items-center justify-center gap-2 text-sm text-amber-200/70">
               <Loader2 className="w-4 h-4 animate-spin" />
               Sending your submission…
             </CardContent>
@@ -379,25 +397,28 @@ export default function BoothBattleSubmit() {
         )}
 
         {view.kind === 'thanks' && (
-          <Card className="border-emerald-200 dark:border-emerald-900">
+          <Card className="bg-[#3a2415] border-[#6a4226] border-l-2 border-l-[#b8860b]">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PartyPopper className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <CardTitle className="flex items-center gap-2 text-base text-slate-50">
+                <PartyPopper className="w-5 h-5 text-[#d4a96a]" />
                 Thank you for participating!
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Your entry for <strong>{view.siteName}</strong> has been
+              <p className="text-sm text-amber-200/70">
+                Your entry for <strong className="text-slate-50">{view.siteName}</strong> has been
                 recorded. Scores will appear on the leaderboard once they’re
                 tallied.
               </p>
               <div className="flex flex-col gap-2">
-                <Button onClick={handleSubmitAnother} className="w-full">
+                <Button onClick={handleSubmitAnother} className={`w-full ${brassButtonClass}`}>
                   Submit another
                 </Button>
                 <Link to="/booth-battle" className="w-full">
-                  <Button variant="outline" className="w-full">
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent border-[#6a4226] text-slate-100 hover:bg-[#5b3621] hover:text-slate-50 focus-visible:ring-[#b8860b]"
+                  >
                     View leaderboard
                   </Button>
                 </Link>
@@ -407,16 +428,16 @@ export default function BoothBattleSubmit() {
         )}
 
         {view.kind === 'error' && (
-          <Card>
+          <Card className="bg-[#3a2415] border-[#6a4226]">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-destructive text-base">
+              <CardTitle className="flex items-center gap-2 text-base text-red-400">
                 <AlertCircle className="w-5 h-5" />
                 Something went wrong
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{view.message}</p>
-              <Button onClick={handleSubmitAnother} className="w-full">
+              <p className="text-sm text-amber-200/70">{view.message}</p>
+              <Button onClick={handleSubmitAnother} className={`w-full ${brassButtonClass}`}>
                 Back to form
               </Button>
             </CardContent>
@@ -426,7 +447,7 @@ export default function BoothBattleSubmit() {
         <div className="text-center">
           <Link
             to="/booth-battle"
-            className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+            className="text-xs text-amber-200/60 hover:text-amber-100 underline-offset-4 hover:underline"
           >
             View leaderboard
           </Link>
