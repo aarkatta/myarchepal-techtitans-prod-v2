@@ -22,6 +22,7 @@ import {
   MapPin,
   Users,
   Trash2,
+  Download,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -163,6 +164,15 @@ export const SideNav = () => {
         >
           <Calendar className={`w-5 h-5 ${isActive("/events") ? "text-primary" : ""}`} />
           <span>Events</span>
+        </button>
+
+        {/* Download App */}
+        <button
+          onClick={() => navigate("/download")}
+          className={navItemClass(isActive("/download"))}
+        >
+          <Download className={`w-5 h-5 ${isActive("/download") ? "text-primary" : ""}`} />
+          <span>Download App</span>
         </button>
 
         {/* Gift Shop Collapsible */}

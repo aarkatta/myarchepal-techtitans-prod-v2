@@ -83,6 +83,7 @@ import AdminUsers from "./pages/AdminUsers";
 import Help from "./pages/Help";
 import Giveback from "./pages/Giveback";
 import Deactivate from "./pages/Deactivate";
+import Download from "./pages/Download";
 import { HelpButton } from "@/components/HelpButton";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { PermissionsWrapper } from "@/components/PermissionsWrapper";
@@ -137,6 +138,7 @@ const App = () => {
             <Route path="/event/:id" element={<EventDetails />} />
             <Route path="/digital-diary" element={<DigitalDiary />} />
             <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/download" element={<Download />} />
             <Route path="/site-time-machine" element={<SiteTimeMachine />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/chat" element={
